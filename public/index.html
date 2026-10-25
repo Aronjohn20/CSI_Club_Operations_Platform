@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSI Club Operations Platform</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', -apple-system, sans-serif; }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="brand-badge">CSI</div>
+        <div class="brand-text">
+          <h1>CSI Operations</h1>
+          <p>Student Branch Platform</p>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a class="nav-item active" data-tab="overview">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+          <span>Overview</span>
+        </a>
+        <a class="nav-item" data-tab="certificates">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          <span>Certificates (400)</span>
+        </a>
+        <a class="nav-item" data-tab="coordinators">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+          <span>Coordinators</span>
+        </a>
+        <a class="nav-item" data-tab="events">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          <span>Events</span>
+        </a>
+        <a class="nav-item" data-tab="members">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+          <span>Members</span>
+        </a>
+        <a class="nav-item" data-tab="notion">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          <span>Notion Sync</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="sync-status-pill">
+          <span>Notion Engine</span>
+          <div class="status-indicator-dot"></div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Viewport -->
+    <main class="main-wrapper">
+      <header class="top-header">
+        <div class="header-title-section">
+          <h2 id="page-title">Overview</h2>
+        </div>
+        <div class="header-actions">
+          <span class="badge badge-purple">Cycle: Spring 2026 Term</span>
+          <span class="badge badge-success">Supabase Ready</span>
+        </div>
+      </header>
+
+      <div class="content-body">
+        <!-- TAB 1: OVERVIEW -->
+        <section id="tab-overview" class="tab-pane active">
+          <div class="stat-grid">
+            <div class="stat-card">
+              <div class="stat-label">Active Coordinators</div>
+              <div class="stat-value" id="stat-active-coordinators">--</div>
+              <div class="stat-hint" id="stat-coordinators-breakdown">Loading candidate pool...</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Scheduled Events</div>
+              <div class="stat-value" id="stat-events-count">--</div>
+              <div class="stat-hint">Active term calendar</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Last Batch Validation</div>
+              <div class="stat-value">372 / 400</div>
+              <div class="stat-hint" style="color: #34d399">93% rule pass rate</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Notion Sync Engine</div>
+              <div class="stat-value" id="stat-notion-status" style="font-size: 18px; color: #34d399">Active</div>
+              <div class="stat-hint">Bidirectional / Latest wins</div>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px;">
+            <div class="card">
+              <div class="card-header">
+                <h3>Upcoming Club Events & Assigned Coordinators</h3>
+              </div>
+              <div class="table-responsive">
+                <table class="custom-table">
+                  <thead>
+                    <tr>
+                      <th>Event Name</th>
+                      <th>Date</th>
+                      <th>Status</th>
+                      <th>Allocation</th>
+                      <th>Assigned</th>
+                    </tr>
+                  </thead>
+                  <tbody id="events-table-body"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <h3>Quick Operational Actions</h3>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 12px;">
+                <button class="btn btn-primary" onclick="document.querySelector('[data-tab=\'certificates\']').click()">
+                  Validate 400 Certificates
+                </button>
+                <button class="btn btn-secondary" onclick="document.querySelector('[data-tab=\'coordinators\']').click()">
+                  Run Coordinator Allocation
+                </button>
+                <button class="btn btn-outline" onclick="document.querySelector('[data-tab=\'notion\']').click()">
+                  Sync Notion Operations
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 2: CERTIFICATES BATCH PIPELINE -->
+        <section id="tab-certificates" class="tab-pane">
+          <div class="card" style="margin-bottom: 24px;">
+            <div class="card-header">
+              <div>
+                <h3>Bulk Certificate Validation Pipeline</h3>
+                <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">
+                  Upload up to 400 PDF certificates. Each file is verified against content, formatting, logo, and structural rules.
+                </p>
+              </div>
+              <button id="btn-demo-400-certs" class="btn btn-outline">
+                ⚡ Simulate Full 400-File Batch
+              </button>
+            </div>
+
+            <input type="file" id="cert-file-input" multiple accept=".pdf" style="display: none;">
+            
+            <div class="dropzone-container" id="cert-dropzone">
+              <svg class="dropzone-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+              <div class="dropzone-title">Drag & drop certificate files here (up to 400 files)</div>
+              <div class="dropzone-subtitle">or click to browse PDF documents from your computer</div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px;">
+              <span id="cert-selected-count" style="font-size: 13px; color: var(--text-secondary);">No files selected.</span>
+              <button id="btn-start-validation" class="btn btn-primary" disabled>
+                Start Batch Validation
+              </button>
+            </div>
+          </div>
+
+          <!-- Live Progress Box -->
+          <div id="cert-progress-box" class="card" style="display: none; margin-bottom: 24px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <strong id="cert-progress-text" style="font-size: 15px;">0 / 400 processed</strong>
+                <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Async worker verifying document streams & rules...</p>
+              </div>
+              <div style="display: flex; gap: 16px;">
+                <div><span class="badge badge-success">Passed: <strong id="cert-stat-passed">0</strong></span></div>
+                <div><span class="badge badge-danger">Failed: <strong id="cert-stat-failed">0</strong></span></div>
+                <div><span class="badge badge-warning">Errors: <strong id="cert-stat-errors">0</strong></span></div>
+              </div>
+            </div>
+            <div class="progress-bar-container">
+              <div id="cert-progress-fill" class="progress-bar-fill" style="width: 0%;"></div>
+            </div>
+          </div>
+
+          <!-- Batch Results Table -->
+          <div id="cert-results-card" class="card" style="display: none;">
+            <div class="card-header" style="flex-wrap: wrap; gap: 12px;">
+              <div style="display: flex; gap: 8px;">
+                <button class="btn btn-outline cert-filter-btn active" data-filter="all">All Files</button>
+                <button class="btn btn-outline cert-filter-btn" data-filter="PASSED">Passed</button>
+                <button class="btn btn-outline cert-filter-btn" data-filter="FAILED">Failed Rules</button>
+              </div>
+              <div style="display: flex; gap: 12px;">
+                <input type="text" id="cert-search-input" placeholder="Search by filename..." style="background: var(--bg-surface-elevated); border: 1px solid var(--border-medium); color: #fff; padding: 8px 14px; border-radius: var(--radius-md); font-size: 13px;">
+                <button id="btn-export-csv" class="btn btn-secondary">
+                  📥 Export CSV
+                </button>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="custom-table">
+                <thead>
+                  <tr>
+                    <th>Filename</th>
+                    <th>Overall Status</th>
+                    <th>Rules Passed</th>
+                    <th>Failure Reason / Diagnostic</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="cert-results-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 3: COORDINATOR ALLOCATION STUDIO -->
+        <section id="tab-coordinators" class="tab-pane">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+            <div class="card">
+              <div class="card-header">
+                <h3>Constraint-Based Allocation Generator</h3>
+              </div>
+              
+              <div style="display: flex; flex-direction: column; gap: 16px;">
+                <div>
+                  <label style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 6px;">Target Event</label>
+                  <select id="alloc-event-select" style="width: 100%; background: var(--bg-surface-elevated); border: 1px solid var(--border-medium); color: #fff; padding: 10px; border-radius: var(--radius-md); font-size: 14px;"></select>
+                </div>
+
+                <div>
+                  <label style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 6px;">Required Coordinators Count (Rule 2.1: 2 or 3 only)</label>
+                  <select id="alloc-count-input" style="width: 100%; background: var(--bg-surface-elevated); border: 1px solid var(--border-medium); color: #fff; padding: 10px; border-radius: var(--radius-md); font-size: 14px;">
+                    <option value="2" selected>2 Coordinators (1 New + 1 Old)</option>
+                    <option value="3">3 Coordinators (2 New + 1 Old [Fallback: 1 New + 2 Old])</option>
+                  </select>
+                </div>
+
+                <div class="card" style="background: var(--bg-surface-elevated); padding: 14px;">
+                  <strong style="font-size: 13px; color: #f0abfc;">Active Business Rules:</strong>
+                  <ul style="font-size: 12px; color: var(--text-secondary); margin-left: 20px; margin-top: 8px; line-height: 1.6;">
+                    <li><strong>2 Coordinators:</strong> Exactly 1 New (2026) + 1 Old (2024/2025)</li>
+                    <li><strong>3 Coordinators:</strong> Preferred 2 New + 1 Old (Fallback: 1 New + 2 Old)</li>
+                    <li><strong>Pair History:</strong> Avoids repeating prior pairs; preserved across cycles</li>
+                    <li><strong>Workload:</strong> Prioritizes members with fewest completed events</li>
+                    <li><strong>Lifecycle:</strong> Event counts increase only after event completion</li>
+                  </ul>
+                </div>
+
+                <button id="btn-generate-allocation" class="btn btn-primary" style="justify-content: center;">
+                  Generate Deterministic Allocation
+                </button>
+              </div>
+            </div>
+
+            <!-- Allocation Result Display -->
+            <div class="card">
+              <div class="card-header">
+                <h3>Proposed Coordinator Group</h3>
+              </div>
+
+              <div id="alloc-result-box" style="display: none;">
+                <p style="font-size: 13px; color: var(--text-secondary);">
+                  Allocation result for: <strong id="alloc-event-display" style="color: #fff;">--</strong>
+                </p>
+
+                <div id="alloc-selected-coordinators"></div>
+
+                <div style="margin-top: 16px;">
+                  <strong style="font-size: 12px; color: var(--text-muted); text-transform: uppercase;">Satisfied Constraints:</strong>
+                  <div id="alloc-constraint-chips" class="constraint-chips-container"></div>
+                </div>
+
+                <div style="margin-top: 24px; display: flex; justify-content: flex-end; gap: 12px;">
+                  <button id="btn-confirm-allocation" class="btn btn-primary">
+                    Confirm & Save Assignment
+                  </button>
+                </div>
+              </div>
+
+              <div id="alloc-empty-state" style="text-align: center; padding: 48px 16px; color: var(--text-muted);">
+                <p>Select an event and click <strong>Generate Deterministic Allocation</strong> to run the constraint solver.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 4: EVENTS -->
+        <section id="tab-events" class="tab-pane">
+          <div class="card">
+            <div class="card-header">
+              <h3>Club Events Schedule</h3>
+            </div>
+            <div class="table-responsive">
+              <table class="custom-table">
+                <thead>
+                  <tr>
+                    <th>Event Name</th>
+                    <th>Date</th>
+                    <th>Status</th>
+                    <th>Required Coordinators</th>
+                    <th>Assigned Coordinators</th>
+                  </tr>
+                </thead>
+                <tbody id="events-table-body-full"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 5: MEMBERS DIRECTORY -->
+        <section id="tab-members" class="tab-pane">
+          <div class="card">
+            <div class="card-header">
+              <h3>Club Members & Coordinator Classification</h3>
+            </div>
+            <div class="table-responsive">
+              <table class="custom-table">
+                <thead>
+                  <tr>
+                    <th>Member Name</th>
+                    <th>Role & Domain</th>
+                    <th>Class</th>
+                    <th>Classification</th>
+                    <th>Assignments</th>
+                    <th>Status</th>
+                    <th>Notion Sync</th>
+                  </tr>
+                </thead>
+                <tbody id="members-table-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 6: NOTION SYNC CENTER -->
+        <section id="tab-notion" class="tab-pane">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+            <div class="card">
+              <div class="card-header">
+                <h3>Notion Integration Control Center</h3>
+                <span class="badge badge-success">Connected</span>
+              </div>
+              <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 20px;">
+                Synchronize operational data between Notion databases and local Supabase PostgreSQL records.
+              </p>
+
+              <div style="display: flex; flex-direction: column; gap: 12px;">
+                <button id="btn-sync-pull" class="btn btn-secondary">
+                  ⬇ Pull Updates from Notion (Members & Events)
+                </button>
+                <button id="btn-sync-push" class="btn btn-secondary">
+                  ⬆ Push Local Allocations to Notion
+                </button>
+                <button id="btn-sync-all" class="btn btn-primary">
+                  🔄 Execute Full Two-Way Synchronization
+                </button>
+              </div>
+
+              <div class="card" style="margin-top: 20px; background: var(--bg-surface-elevated); padding: 14px;">
+                <strong style="font-size: 13px;">Conflict Policy: <span style="color: #f0abfc">latest_wins</span></strong>
+                <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+                  Incoming Notion edits with newer <code style="color: #38bdf8">last_edited_time</code> automatically update local data; otherwise local edits overwrite remote pages.
+                </p>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <h3>Live Sync Job Activity & Audit Log</h3>
+              </div>
+              <div id="sync-live-log" style="background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 14px; font-family: monospace; font-size: 12px; height: 260px; overflow-y: auto; color: #a5b4fc; line-height: 1.6;">
+                [Ready] Notion sync worker listening for scheduled and manual triggers...<br>
+                [Info] Using Supabase conflict strategy: latest_wins<br>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- Detail Modal for Certificate Inspector -->
+  <div id="cert-detail-modal" class="modal-overlay">
+    <div class="modal-window">
+      <div class="modal-header">
+        <h3 style="font-size: 16px;">Certificate Rule Inspector</h3>
+        <button class="btn btn-outline" style="padding: 4px 8px;" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-body" id="modal-cert-detail-body"></div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/mockData.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

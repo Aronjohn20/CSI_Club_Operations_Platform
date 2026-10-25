@@ -1,0 +1,8 @@
+# CSI Club Operations Platform - Python Dependencies
+fastapi>=0.115.0
+uvicorn>=0.30.0
+pydantic>=2.8.0
+pypdf>=5.0.0
+python-multipart>=0.0.9
+requests>=2.32.0
+pytest>=8.3.0

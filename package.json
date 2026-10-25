@@ -1,0 +1,28 @@
+{
+  "name": "csi-notion-integration",
+  "version": "1.0.0",
+  "description": "Production-grade Notion synchronization engine for CSI Club Operations Platform with Supabase",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "node --test dist/tests/*.js",
+    "sync:pull": "ts-node src/cli.ts pull",
+    "sync:push": "ts-node src/cli.ts push",
+    "sync:bidirectional": "ts-node src/cli.ts sync",
+    "sync:inspect": "ts-node src/cli.ts inspect",
+    "sync:preview": "ts-node src/cli.ts preview"
+  },
+  "dependencies": {
+    "@notionhq/client": "^2.2.15",
+    "@supabase/supabase-js": "^2.48.1",
+    "dotenv": "^16.4.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.4",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
