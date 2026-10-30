@@ -45,15 +45,11 @@
           <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
           <span>Members</span>
         </a>
-        <a class="nav-item" data-tab="notion">
-          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-          <span>Notion Sync</span>
-        </a>
       </nav>
 
       <div class="sidebar-footer">
         <div class="sync-status-pill">
-          <span>Notion Engine</span>
+          <span>Standalone Mode</span>
           <div class="status-indicator-dot"></div>
         </div>
       </div>
@@ -91,9 +87,9 @@
               <div class="stat-hint" style="color: #34d399">93% rule pass rate</div>
             </div>
             <div class="stat-card">
-              <div class="stat-label">Notion Sync Engine</div>
-              <div class="stat-value" id="stat-notion-status" style="font-size: 18px; color: #34d399">Active</div>
-              <div class="stat-hint">Bidirectional / Latest wins</div>
+              <div class="stat-label">Platform Mode</div>
+              <div class="stat-value" style="font-size: 18px; color: #34d399">Standalone</div>
+              <div class="stat-hint">Self-Contained & Independent</div>
             </div>
           </div>
 
@@ -129,8 +125,8 @@
                 <button class="btn btn-secondary" onclick="document.querySelector('[data-tab=\'coordinators\']').click()">
                   Run Coordinator Allocation
                 </button>
-                <button class="btn btn-outline" onclick="document.querySelector('[data-tab=\'notion\']').click()">
-                  Sync Notion Operations
+                <button class="btn btn-outline" onclick="document.querySelector('[data-tab=\'members\']').click()">
+                  View Members Directory
                 </button>
               </div>
             </div>
@@ -331,7 +327,7 @@
                     <th>Classification</th>
                     <th>Assignments</th>
                     <th>Status</th>
-                    <th>Notion Sync</th>
+                    <th>Contact</th>
                   </tr>
                 </thead>
                 <tbody id="members-table-body"></tbody>
@@ -340,49 +336,7 @@
           </div>
         </section>
 
-        <!-- TAB 6: NOTION SYNC CENTER -->
-        <section id="tab-notion" class="tab-pane">
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
-            <div class="card">
-              <div class="card-header">
-                <h3>Notion Integration Control Center</h3>
-                <span class="badge badge-success">Connected</span>
-              </div>
-              <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 20px;">
-                Synchronize operational data between Notion databases and local Supabase PostgreSQL records.
-              </p>
-
-              <div style="display: flex; flex-direction: column; gap: 12px;">
-                <button id="btn-sync-pull" class="btn btn-secondary">
-                  ⬇ Pull Updates from Notion (Members & Events)
-                </button>
-                <button id="btn-sync-push" class="btn btn-secondary">
-                  ⬆ Push Local Allocations to Notion
-                </button>
-                <button id="btn-sync-all" class="btn btn-primary">
-                  🔄 Execute Full Two-Way Synchronization
-                </button>
-              </div>
-
-              <div class="card" style="margin-top: 20px; background: var(--bg-surface-elevated); padding: 14px;">
-                <strong style="font-size: 13px;">Conflict Policy: <span style="color: #f0abfc">latest_wins</span></strong>
-                <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
-                  Incoming Notion edits with newer <code style="color: #38bdf8">last_edited_time</code> automatically update local data; otherwise local edits overwrite remote pages.
-                </p>
-              </div>
-            </div>
-
-            <div class="card">
-              <div class="card-header">
-                <h3>Live Sync Job Activity & Audit Log</h3>
-              </div>
-              <div id="sync-live-log" style="background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 14px; font-family: monospace; font-size: 12px; height: 260px; overflow-y: auto; color: #a5b4fc; line-height: 1.6;">
-                [Ready] Notion sync worker listening for scheduled and manual triggers...<br>
-                [Info] Using Supabase conflict strategy: latest_wins<br>
-              </div>
-            </div>
-          </div>
-        </section>
+        <!-- TAB 5: MEMBERS DIRECTORY (Already above) -->
       </div>
     </main>
   </div>

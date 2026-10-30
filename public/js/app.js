@@ -9,7 +9,6 @@ document.addEventListener("DOMContentLoaded", () => {
   renderEvents();
   initCertificateUploader();
   initAllocationStudio();
-  initNotionSyncCenter();
 });
 
 // ------------------------------------------------------------------------------
@@ -50,7 +49,6 @@ function renderOverview() {
   document.getElementById("stat-active-coordinators").textContent = activeCount;
   document.getElementById("stat-coordinators-breakdown").textContent = `${newCount} New • ${oldCount} Senior/Old`;
   document.getElementById("stat-events-count").textContent = data.events.length;
-  document.getElementById("stat-notion-status").textContent = "Connected (2-way)";
 }
 
 // ------------------------------------------------------------------------------
@@ -100,10 +98,8 @@ function renderMembers() {
           ${m.active ? "Active" : "Inactive"}
         </span>
       </td>
-      <td>
-        <span class="badge ${m.notion_page_id ? "badge-success" : "badge-warning"}">
-          ${m.notion_page_id ? "Synced" : "Local only"}
-        </span>
+      <td style="font-size: 12px; color: var(--text-secondary); font-family: monospace;">
+        ${escapeHtml(m.email)}
       </td>
     `;
     tbody.appendChild(tr);
@@ -559,47 +555,6 @@ function initAllocationStudio() {
   });
 }
 
-// ------------------------------------------------------------------------------
-// Notion Sync Center
-// ------------------------------------------------------------------------------
-function initNotionSyncCenter() {
-  const pullBtn = document.getElementById("btn-sync-pull");
-  const pushBtn = document.getElementById("btn-sync-push");
-  const fullSyncBtn = document.getElementById("btn-sync-all");
-  const logContainer = document.getElementById("sync-live-log");
-
-  function log(msg) {
-    if (!logContainer) return;
-    const time = new Date().toLocaleTimeString();
-    logContainer.innerHTML = `[${time}] ${escapeHtml(msg)}<br>` + logContainer.innerHTML;
-  }
-
-  if (pullBtn) {
-    pullBtn.addEventListener("click", () => {
-      log("Starting Pull from Notion...");
-      setTimeout(() => log("Notion API query: retrieved 8 active member pages."), 300);
-      setTimeout(() => log("Notion API query: retrieved 3 event pages."), 600);
-      setTimeout(() => log("Pull completed: 11 records processed. 0 conflicts."), 900);
-    });
-  }
-
-  if (pushBtn) {
-    pushBtn.addEventListener("click", () => {
-      log("Pushing local updates to Notion...");
-      setTimeout(() => log("Transmitted 2 coordinator assignments to Notion."), 400);
-      setTimeout(() => log("Push completed successfully. All pages up to date."), 800);
-    });
-  }
-
-  if (fullSyncBtn) {
-    fullSyncBtn.addEventListener("click", () => {
-      log("Initiating bidirectional synchronization...");
-      setTimeout(() => log("Running Conflict Resolver under 'latest_wins' strategy..."), 400);
-      setTimeout(() => log("Identified 1 conflict on Member 'Aarav Sharma' (Member Type). Resolved: Notion update applied."), 800);
-      setTimeout(() => log("Bidirectional sync completed cleanly. Supabase & Notion synchronized."), 1200);
-    });
-  }
-}
 
 // Helpers
 function escapeHtml(str) {

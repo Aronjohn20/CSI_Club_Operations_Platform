@@ -86,22 +86,5 @@ window.CSIData = {
         { filename: "cert_participant_215.pdf", failed_rule: "Forbidden Text Check", reason: "Contained placeholder 'Lorem Ipsum'" },
       ]
     }
-  ],
-
-  notionSyncState: {
-    status: "healthy",
-    lastSyncTimestamp: "2026-10-24T12:00:00Z",
-    direction: "bidirectional",
-    recordsRead: 56,
-    recordsWritten: 8,
-    conflictsDetected: 1,
-    conflictsResolved: 1,
-    activeConflict: {
-      entity: "Member: Aarav Sharma",
-      field: "Member Type",
-      notionValue: "New Coordinator",
-      appValue: "Executive",
-      resolvedStrategy: "latest_wins (Notion Edit Applied)",
-    }
-  }
+  ]
 };
