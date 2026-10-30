@@ -119,14 +119,14 @@
                 <h3>Quick Operational Actions</h3>
               </div>
               <div style="display: flex; flex-direction: column; gap: 12px;">
-                <button class="btn btn-primary" onclick="document.querySelector('[data-tab=\'certificates\']').click()">
-                  Validate 400 Certificates
+                <button class="btn btn-primary" onclick="openAddEventModal()">
+                  + Add New Event
                 </button>
                 <button class="btn btn-secondary" onclick="document.querySelector('[data-tab=\'coordinators\']').click()">
                   Run Coordinator Allocation
                 </button>
-                <button class="btn btn-outline" onclick="document.querySelector('[data-tab=\'members\']').click()">
-                  View Members Directory
+                <button class="btn btn-outline" onclick="document.querySelector('[data-tab=\'certificates\']').click()">
+                  Validate Certificates
                 </button>
               </div>
             </div>
@@ -215,6 +215,36 @@
               </table>
             </div>
           </div>
+
+          <!-- Batch History Table -->
+          <div id="cert-history-card" class="card" style="margin-top: 24px;">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <h3>Recent Batch Validation Runs</h3>
+                <p style="font-size: 13px; color: var(--text-muted); margin-top: 2px;">
+                  Audit trail of recent certificate batches verified in this browser session.
+                </p>
+              </div>
+              <button class="btn btn-outline" style="font-size: 12px; padding: 6px 12px;" onclick="clearBatchHistory()">
+                Clear History
+              </button>
+            </div>
+            <div class="table-responsive">
+              <table class="custom-table">
+                <thead>
+                  <tr>
+                    <th>Batch Timestamp</th>
+                    <th>Total Certificates</th>
+                    <th>Passed</th>
+                    <th>Failed</th>
+                    <th>Pass Rate</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="cert-history-body"></tbody>
+              </table>
+            </div>
+          </div>
         </section>
 
         <!-- TAB 3: COORDINATOR ALLOCATION STUDIO -->
@@ -291,8 +321,19 @@
         <!-- TAB 4: EVENTS -->
         <section id="tab-events" class="tab-pane">
           <div class="card">
-            <div class="card-header">
-              <h3>Club Events Schedule</h3>
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <h3>Club Events Schedule</h3>
+                <p style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">Manage upcoming calendar, required coordinators, and event status.</p>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <button class="btn btn-primary" onclick="openAddEventModal()" style="padding: 8px 16px;">
+                  + Add New Event
+                </button>
+                <button class="btn btn-outline" onclick="exportEventsCSV()" style="padding: 8px 16px;">
+                  📤 Export CSV
+                </button>
+              </div>
             </div>
             <div class="table-responsive">
               <table class="custom-table">
@@ -303,6 +344,7 @@
                     <th>Status</th>
                     <th>Required Coordinators</th>
                     <th>Assigned Coordinators</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody id="events-table-body-full"></tbody>
@@ -314,8 +356,26 @@
         <!-- TAB 5: MEMBERS DIRECTORY -->
         <section id="tab-members" class="tab-pane">
           <div class="card">
-            <div class="card-header">
-              <h3>Club Members & Coordinator Classification</h3>
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+              <div>
+                <h3>Club Members & Coordinator Classification</h3>
+                <p style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">
+                  Manage active member roster, coordinator classification, and completed event counts.
+                </p>
+              </div>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                <input type="text" id="member-search-input" placeholder="Search members..." style="background: var(--bg-surface-elevated); border: 1px solid var(--border-medium); color: #fff; padding: 8px 12px; border-radius: var(--radius-md); font-size: 13px;">
+                <button class="btn btn-primary" onclick="openMemberModal()">
+                  + Add Member
+                </button>
+                <button class="btn btn-secondary" onclick="document.getElementById('member-csv-input').click()">
+                  📥 Import CSV
+                </button>
+                <button class="btn btn-outline" onclick="exportMembersCSV()">
+                  📤 Export CSV
+                </button>
+                <input type="file" id="member-csv-input" accept=".csv" style="display: none;" onchange="handleMemberCSVImport(event)">
+              </div>
             </div>
             <div class="table-responsive">
               <table class="custom-table">
@@ -328,6 +388,7 @@
                     <th>Assignments</th>
                     <th>Status</th>
                     <th>Contact</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody id="members-table-body"></tbody>
@@ -351,6 +412,118 @@
       <div class="modal-body" id="modal-cert-detail-body"></div>
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal for Adding New Event -->
+  <div id="add-event-modal" class="modal-overlay">
+    <div class="modal-window" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3 style="font-size: 16px;">Add New Club Event</h3>
+        <button class="btn btn-outline" style="padding: 4px 8px;" onclick="closeAddEventModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <form id="form-add-event" onsubmit="event.preventDefault(); saveNewEvent();" style="display: flex; flex-direction: column; gap: 14px;">
+          <div>
+            <label style="display: block; font-size: 12px; font-weight: 500; margin-bottom: 6px; color: var(--text-secondary);">Event Name</label>
+            <input type="text" id="input-event-name" required placeholder="e.g. Intra-College Hackathon 2026" style="width: 100%; padding: 10px 12px; background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); color: var(--text-primary); font-size: 13px;">
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div>
+              <label style="display: block; font-size: 12px; font-weight: 500; margin-bottom: 6px; color: var(--text-secondary);">Event Date</label>
+              <input type="date" id="input-event-date" required style="width: 100%; padding: 10px 12px; background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); color: var(--text-primary); font-size: 13px;">
+            </div>
+            <div>
+              <label style="display: block; font-size: 12px; font-weight: 500; margin-bottom: 6px; color: var(--text-secondary);">Required Coordinators</label>
+              <select id="input-event-coordinators" style="width: 100%; padding: 10px 12px; background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); color: var(--text-primary); font-size: 13px;">
+                <option value="2" selected>2 (1 Old + 1 New)</option>
+                <option value="3">3 (2 New + 1 Old)</option>
+                <option value="4">4 Coordinators</option>
+              </select>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button class="btn btn-secondary" onclick="closeAddEventModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveNewEvent()">Save Event</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal for Adding / Editing Member -->
+  <div id="member-modal" class="modal-overlay">
+    <div class="modal-window" style="max-width: 520px;">
+      <div class="modal-header">
+        <h3 id="member-modal-title" style="font-size: 16px;">Add New Member</h3>
+        <button class="btn btn-outline" style="padding: 4px 8px;" onclick="closeMemberModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <form id="form-member" onsubmit="event.preventDefault(); saveMember();" style="display: flex; flex-direction: column; gap: 14px;">
+          <input type="hidden" id="input-member-id">
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div>
+              <label style="display: block; font-size: 12px; font-weight: 500; margin-bottom: 6px; color: var(--text-secondary);">Full Name</label>
+              <input type="text" id="input-member-name" required placeholder="e.g. Aron Varghese" style="width: 100%; padding: 10px 12px; background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); color: var(--text-primary); font-size: 13px;">
+            </div>
+            <div>
+              <label style="display: block; font-size: 12px; font-weight: 500; margin-bottom: 6px; color: var(--text-secondary);">Email</label>
+              <input type="email" id="input-member-email" required placeholder="name@csi.org" style="width: 100%; padding: 10px 12px; background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); color: var(--text-primary); font-size: 13px;">
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div>
+              <label style="display: block; font-size: 12px; font-weight: 500; margin-bottom: 6px; color: var(--text-secondary);">Role / Title</label>
+              <input type="text" id="input-member-role" required placeholder="e.g. Operations Lead" style="width: 100%; padding: 10px 12px; background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); color: var(--text-primary); font-size: 13px;">
+            </div>
+            <div>
+              <label style="display: block; font-size: 12px; font-weight: 500; margin-bottom: 6px; color: var(--text-secondary);">Domain</label>
+              <select id="input-member-domain" style="width: 100%; padding: 10px 12px; background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); color: var(--text-primary); font-size: 13px;">
+                <option value="Executive">Executive</option>
+                <option value="Operations" selected>Operations</option>
+                <option value="Technical">Technical</option>
+                <option value="Creative">Creative</option>
+                <option value="Documentation">Documentation</option>
+                <option value="Marketing">Marketing</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div>
+              <label style="display: block; font-size: 12px; font-weight: 500; margin-bottom: 6px; color: var(--text-secondary);">Class / Batch</label>
+              <input type="text" id="input-member-class" required placeholder="e.g. S7 CS A" style="width: 100%; padding: 10px 12px; background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); color: var(--text-primary); font-size: 13px;">
+            </div>
+            <div>
+              <label style="display: block; font-size: 12px; font-weight: 500; margin-bottom: 6px; color: var(--text-secondary);">Coordinator Classification</label>
+              <select id="input-member-type" style="width: 100%; padding: 10px 12px; background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); color: var(--text-primary); font-size: 13px;">
+                <option value="new_coordinator">New Coordinator (2026 Batch)</option>
+                <option value="old_coordinator">Old Coordinator (2024/2025)</option>
+                <option value="executive">Executive Lead</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: center;">
+            <div>
+              <label style="display: block; font-size: 12px; font-weight: 500; margin-bottom: 6px; color: var(--text-secondary);">Completed Event Assignments</label>
+              <input type="number" id="input-member-assignments" min="0" value="0" style="width: 100%; padding: 10px 12px; background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); color: var(--text-primary); font-size: 13px;">
+            </div>
+            <div style="padding-top: 18px;">
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-primary); cursor: pointer;">
+                <input type="checkbox" id="input-member-active" checked style="accent-color: var(--accent-magenta); width: 16px; height: 16px;">
+                Active in Candidate Pool
+              </label>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button class="btn btn-secondary" onclick="closeMemberModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveMember()">Save Member</button>
       </div>
     </div>
   </div>

@@ -3,12 +3,37 @@
 // ==============================================================================
 
 document.addEventListener("DOMContentLoaded", () => {
+  // Restore saved events from localStorage if any
+  const savedEvents = localStorage.getItem("csi_events");
+  if (savedEvents) {
+    try {
+      window.CSIData.events = JSON.parse(savedEvents);
+    } catch (_) {}
+  }
+
+  // Restore updated member assignment counts if any
+  const savedMembers = localStorage.getItem("csi_members");
+  if (savedMembers) {
+    try {
+      window.CSIData.members = JSON.parse(savedMembers);
+    } catch (_) {}
+  }
+
   initNavigation();
   renderOverview();
   renderMembers();
   renderEvents();
   initCertificateUploader();
+  renderRecentBatches();
   initAllocationStudio();
+
+  // Search input listener for members
+  const memberSearch = document.getElementById("member-search-input");
+  if (memberSearch) {
+    memberSearch.addEventListener("input", (e) => {
+      renderMembers(e.target.value.trim());
+    });
+  }
 });
 
 // ------------------------------------------------------------------------------
@@ -80,20 +105,39 @@ function updateOverviewBatchStat(batch) {
 }
 
 // ------------------------------------------------------------------------------
-// Members Directory
+// Members Directory & In-App Management
 // ------------------------------------------------------------------------------
-function renderMembers() {
+let currentMemberFilter = "";
+
+function renderMembers(searchTerm = currentMemberFilter) {
+  currentMemberFilter = searchTerm;
   const tbody = document.getElementById("members-table-body");
   if (!tbody) return;
 
-  const members = window.CSIData.members;
+  let members = window.CSIData.members || [];
+  if (searchTerm) {
+    const q = searchTerm.toLowerCase();
+    members = members.filter((m) =>
+      (m.name && m.name.toLowerCase().includes(q)) ||
+      (m.email && m.email.toLowerCase().includes(q)) ||
+      (m.role && m.role.toLowerCase().includes(q)) ||
+      (m.domain && m.domain.toLowerCase().includes(q)) ||
+      (m.class_batch && m.class_batch.toLowerCase().includes(q))
+    );
+  }
+
   tbody.innerHTML = "";
+
+  if (members.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 32px; color: var(--text-muted);">No members match your criteria. Click <strong>+ Add Member</strong> or <strong>📥 Import CSV</strong> to add coordinators!</td></tr>`;
+    return;
+  }
 
   members.forEach((m) => {
     const tr = document.createElement("tr");
 
     let badgeClass = "badge-blue";
-    let badgeText = m.member_type.replace("_", " ");
+    let badgeText = (m.member_type || "").replace("_", " ");
     if (m.member_type === "new_coordinator") {
       badgeClass = "badge-purple";
       badgeText = "New Coordinator";
@@ -109,6 +153,13 @@ function renderMembers() {
     const domainDisplay = m.domain ? `<span style="font-size: 11px; color: var(--text-muted); display: block;">${escapeHtml(m.domain)}</span>` : "";
     const classBadge = m.class_batch ? `<span class="badge" style="background: rgba(255,255,255,0.06); font-family: monospace;">${escapeHtml(m.class_batch)}</span>` : "-";
 
+    const actionButtons = `
+      <div style="display: flex; gap: 6px; align-items: center;">
+        <button class="btn btn-outline" style="padding: 4px 8px; font-size: 11px; color: #a855f7; border-color: rgba(168, 85, 247, 0.4);" onclick="openMemberModal('${m.id}')" title="Edit member details">✏️ Edit</button>
+        <button class="btn btn-outline" style="padding: 4px 8px; font-size: 11px; color: #f87171; border-color: rgba(248, 113, 113, 0.4);" onclick="deleteMember('${m.id}')" title="Delete member">🗑</button>
+      </div>
+    `;
+
     tr.innerHTML = `
       <td>
         <strong>${escapeHtml(m.name)}</strong>
@@ -120,19 +171,249 @@ function renderMembers() {
       </td>
       <td>${classBadge}</td>
       <td><span class="badge ${badgeClass}">${badgeText}</span></td>
-      <td>${m.assignment_count} event(s)</td>
+      <td>${m.assignment_count ?? 0} event(s)</td>
       <td>
-        <span class="badge ${m.active ? "badge-success" : "badge-danger"}">
-          ${m.active ? "Active" : "Inactive"}
+        <span class="badge ${m.active !== false ? "badge-success" : "badge-danger"}">
+          ${m.active !== false ? "Active" : "Inactive"}
         </span>
       </td>
       <td style="font-size: 12px; color: var(--text-secondary); font-family: monospace;">
         ${escapeHtml(m.email)}
       </td>
+      <td>${actionButtons}</td>
     `;
     tbody.appendChild(tr);
   });
 }
+
+// In-App Member Management & Modals
+window.openMemberModal = function (memberId) {
+  const modal = document.getElementById("member-modal");
+  const title = document.getElementById("member-modal-title");
+  const idInput = document.getElementById("input-member-id");
+  const nameInput = document.getElementById("input-member-name");
+  const emailInput = document.getElementById("input-member-email");
+  const roleInput = document.getElementById("input-member-role");
+  const domainInput = document.getElementById("input-member-domain");
+  const classInput = document.getElementById("input-member-class");
+  const typeInput = document.getElementById("input-member-type");
+  const assignInput = document.getElementById("input-member-assignments");
+  const activeInput = document.getElementById("input-member-active");
+
+  if (!modal) return;
+
+  if (memberId) {
+    const m = window.CSIData.members.find((x) => x.id === memberId);
+    if (!m) return;
+    title.textContent = "Edit Member Details";
+    idInput.value = m.id;
+    nameInput.value = m.name || "";
+    emailInput.value = m.email || "";
+    roleInput.value = m.role || "";
+    domainInput.value = m.domain || "Operations";
+    classInput.value = m.class_batch || "";
+    typeInput.value = m.member_type || "old_coordinator";
+    assignInput.value = m.assignment_count ?? 0;
+    activeInput.checked = m.active !== false;
+  } else {
+    title.textContent = "Add New Member";
+    idInput.value = "";
+    nameInput.value = "";
+    emailInput.value = "";
+    roleInput.value = "";
+    domainInput.value = "Operations";
+    classInput.value = "";
+    typeInput.value = "new_coordinator";
+    assignInput.value = 0;
+    activeInput.checked = true;
+  }
+
+  modal.classList.add("active");
+};
+
+window.closeMemberModal = function () {
+  const modal = document.getElementById("member-modal");
+  if (modal) modal.classList.remove("active");
+};
+
+window.saveMember = function () {
+  const idInput = document.getElementById("input-member-id");
+  const nameInput = document.getElementById("input-member-name");
+  const emailInput = document.getElementById("input-member-email");
+  const roleInput = document.getElementById("input-member-role");
+  const domainInput = document.getElementById("input-member-domain");
+  const classInput = document.getElementById("input-member-class");
+  const typeInput = document.getElementById("input-member-type");
+  const assignInput = document.getElementById("input-member-assignments");
+  const activeInput = document.getElementById("input-member-active");
+
+  const name = nameInput.value.trim();
+  const email = emailInput.value.trim();
+  if (!name || !email) {
+    alert("Please provide both name and email.");
+    return;
+  }
+
+  const memberId = idInput.value;
+  if (memberId) {
+    // Edit existing member
+    const m = window.CSIData.members.find((x) => x.id === memberId);
+    if (m) {
+      m.name = name;
+      m.email = email;
+      m.role = roleInput.value.trim() || "Member";
+      m.domain = domainInput.value;
+      m.class_batch = classInput.value.trim() || "-";
+      m.member_type = typeInput.value;
+      m.assignment_count = parseInt(assignInput.value, 10) || 0;
+      m.active = activeInput.checked;
+    }
+  } else {
+    // Add new member
+    const newMember = {
+      id: `mem-${Date.now()}`,
+      name,
+      email,
+      role: roleInput.value.trim() || "Member",
+      domain: domainInput.value || "Operations",
+      class_batch: classInput.value.trim() || "-",
+      member_type: typeInput.value,
+      assignment_count: parseInt(assignInput.value, 10) || 0,
+      active: activeInput.checked,
+    };
+    window.CSIData.members.push(newMember);
+  }
+
+  localStorage.setItem("csi_members", JSON.stringify(window.CSIData.members));
+  closeMemberModal();
+  renderMembers();
+  renderOverview();
+};
+
+window.deleteMember = function (memberId) {
+  const m = window.CSIData.members.find((x) => x.id === memberId);
+  const name = m ? m.name : "this member";
+  if (!confirm(`Are you sure you want to remove ${name} from the club operations roster?`)) return;
+
+  window.CSIData.members = window.CSIData.members.filter((x) => x.id !== memberId);
+  localStorage.setItem("csi_members", JSON.stringify(window.CSIData.members));
+  renderMembers();
+  renderOverview();
+};
+
+// CSV Export & Import for Members
+window.exportMembersCSV = function () {
+  const members = window.CSIData.members;
+  if (!members || members.length === 0) {
+    alert("No members to export.");
+    return;
+  }
+
+  const headers = ["Name", "Email", "Role", "Domain", "Class_Batch", "Member_Type", "Assignment_Count", "Active"];
+  const rows = members.map((m) => [
+    `"${(m.name || "").replace(/"/g, '""')}"`,
+    `"${(m.email || "").replace(/"/g, '""')}"`,
+    `"${(m.role || "").replace(/"/g, '""')}"`,
+    `"${(m.domain || "").replace(/"/g, '""')}"`,
+    `"${(m.class_batch || "").replace(/"/g, '""')}"`,
+    `"${m.member_type || "old_coordinator"}"`,
+    m.assignment_count ?? 0,
+    m.active !== false ? "true" : "false"
+  ]);
+
+  const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", `csi_members_${new Date().toISOString().split("T")[0]}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
+window.handleMemberCSVImport = function (event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    const text = e.target.result;
+    const lines = text.split(/\r?\n/).filter((line) => line.trim().length > 0);
+    if (lines.length < 2) {
+      alert("The uploaded CSV does not contain any data rows.");
+      return;
+    }
+
+    const headers = lines[0].split(",").map((h) => h.trim().replace(/^["']|["']$/g, "").toLowerCase());
+    const nameIdx = headers.findIndex((h) => h.includes("name"));
+    const emailIdx = headers.findIndex((h) => h.includes("email"));
+    const roleIdx = headers.findIndex((h) => h.includes("role"));
+    const domainIdx = headers.findIndex((h) => h.includes("domain"));
+    const classIdx = headers.findIndex((h) => h.includes("class") || h.includes("batch"));
+    const typeIdx = headers.findIndex((h) => h.includes("type") || h.includes("classification"));
+    const countIdx = headers.findIndex((h) => h.includes("assign") || h.includes("count") || h.includes("event"));
+    const activeIdx = headers.findIndex((h) => h.includes("active"));
+
+    if (nameIdx === -1) {
+      alert("CSV must have at least a 'Name' column.");
+      return;
+    }
+
+    const importedMembers = [];
+    for (let i = 1; i < lines.length; i++) {
+      const row = lines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || lines[i].split(",");
+      const clean = row.map((cell) => cell.trim().replace(/^["']|["']$/g, ""));
+      const name = clean[nameIdx] || "";
+      if (!name) continue;
+
+      const email = emailIdx !== -1 && clean[emailIdx] ? clean[emailIdx] : `${name.toLowerCase().replace(/\s+/g, ".")}@csi.org`;
+      const role = roleIdx !== -1 && clean[roleIdx] ? clean[roleIdx] : "Member";
+      const domain = domainIdx !== -1 && clean[domainIdx] ? clean[domainIdx] : "Operations";
+      const classBatch = classIdx !== -1 && clean[classIdx] ? clean[classIdx] : "S5 CS";
+      
+      let rawType = typeIdx !== -1 && clean[typeIdx] ? clean[typeIdx].toLowerCase() : "old_coordinator";
+      let memberType = "old_coordinator";
+      if (rawType.includes("new") || rawType.includes("2026")) {
+        memberType = "new_coordinator";
+      } else if (rawType.includes("exec")) {
+        memberType = "executive";
+      }
+
+      const count = countIdx !== -1 && clean[countIdx] ? parseInt(clean[countIdx], 10) || 0 : 0;
+      const active = activeIdx !== -1 && clean[activeIdx] ? clean[activeIdx].toLowerCase() !== "false" && clean[activeIdx].toLowerCase() !== "0" : true;
+
+      importedMembers.push({
+        id: `mem-${Date.now()}-${i}`,
+        name,
+        email,
+        role,
+        domain,
+        class_batch: classBatch,
+        member_type: memberType,
+        assignment_count: count,
+        active
+      });
+    }
+
+    if (importedMembers.length === 0) {
+      alert("No valid member records found in the CSV.");
+      return;
+    }
+
+    if (confirm(`Successfully read ${importedMembers.length} member(s) from CSV!\n\nDo you want to REPLACE the current roster (OK) or APPEND to it (Cancel)?`)) {
+      window.CSIData.members = importedMembers;
+    } else {
+      window.CSIData.members = [...window.CSIData.members, ...importedMembers];
+    }
+
+    localStorage.setItem("csi_members", JSON.stringify(window.CSIData.members));
+    event.target.value = "";
+    renderMembers();
+    renderOverview();
+    alert(`Roster updated! You now have ${window.CSIData.members.length} member(s).`);
+  };
+  reader.readAsText(file);
+};
 
 // ------------------------------------------------------------------------------
 // Events Schedule
@@ -148,9 +429,10 @@ function renderEvents() {
   if (eventSelect) eventSelect.innerHTML = "";
 
   if (!events || events.length === 0) {
-    const emptyRow = `<tr><td colspan="5" style="text-align: center; padding: 28px; color: var(--text-muted);">No events scheduled yet. Add your upcoming events to begin coordinator allocations!</td></tr>`;
-    if (tbodyOverview) tbodyOverview.innerHTML = emptyRow;
-    if (tbodyFull) tbodyFull.innerHTML = emptyRow;
+    const emptyRowOverview = `<tr><td colspan="5" style="text-align: center; padding: 28px; color: var(--text-muted);">No events scheduled yet. Click <strong>+ Add New Event</strong> to get started!</td></tr>`;
+    const emptyRowFull = `<tr><td colspan="6" style="text-align: center; padding: 32px; color: var(--text-muted);">No events scheduled yet. Click <strong>+ Add New Event</strong> to create your upcoming club event!</td></tr>`;
+    if (tbodyOverview) tbodyOverview.innerHTML = emptyRowOverview;
+    if (tbodyFull) tbodyFull.innerHTML = emptyRowFull;
     if (eventSelect) {
       eventSelect.innerHTML = `<option value="">No pending events available</option>`;
     }
@@ -158,27 +440,56 @@ function renderEvents() {
   }
 
   events.forEach((e) => {
-    const assignedNames = e.assigned_coordinators
+    const assignedNames = (e.assigned_coordinators || [])
       .map((id) => window.CSIData.members.find((m) => m.id === id)?.name || id)
       .join(", ") || "<em style='color: var(--text-muted)'>None Assigned</em>";
 
-    const rowHtml = `
+    const isCompleted = e.status === "completed";
+    const statusBadge = isCompleted
+      ? `<span class="badge badge-success">Completed</span>`
+      : e.status === "confirmed"
+      ? `<span class="badge badge-blue">Confirmed</span>`
+      : `<span class="badge badge-purple">Planned</span>`;
+
+    // Overview row (5 columns)
+    const rowHtmlOverview = `
       <td><strong>${escapeHtml(e.name)}</strong></td>
       <td>${e.event_date}</td>
-      <td><span class="badge ${e.status === "completed" ? "badge-success" : "badge-purple"}">${e.status}</span></td>
+      <td>${statusBadge}</td>
       <td>${e.required_coordinator_count} required</td>
       <td>${assignedNames}</td>
     `;
 
+    // Full Directory row (6 columns with action buttons)
+    const actionButtons = `
+      <div style="display: flex; gap: 8px; align-items: center;">
+        ${
+          !isCompleted
+            ? `<button class="btn btn-outline" style="padding: 4px 8px; font-size: 11px; color: #34d399; border-color: rgba(52, 211, 153, 0.4);" onclick="markEventCompleted('${e.id}')" title="Mark this event as finished">✓ Mark Done</button>`
+            : `<span style="font-size: 11px; color: #34d399;">Finished ✓</span>`
+        }
+        <button class="btn btn-outline" style="padding: 4px 8px; font-size: 11px; color: #f87171; border-color: rgba(248, 113, 113, 0.4);" onclick="deleteEvent('${e.id}')" title="Delete event">🗑</button>
+      </div>
+    `;
+
+    const rowHtmlFull = `
+      <td><strong>${escapeHtml(e.name)}</strong></td>
+      <td>${e.event_date}</td>
+      <td>${statusBadge}</td>
+      <td>${e.required_coordinator_count} required</td>
+      <td>${assignedNames}</td>
+      <td>${actionButtons}</td>
+    `;
+
     if (tbodyOverview) {
       const tr = document.createElement("tr");
-      tr.innerHTML = rowHtml;
+      tr.innerHTML = rowHtmlOverview;
       tbodyOverview.appendChild(tr);
     }
 
     if (tbodyFull) {
       const trFull = document.createElement("tr");
-      trFull.innerHTML = rowHtml;
+      trFull.innerHTML = rowHtmlFull;
       tbodyFull.appendChild(trFull);
     }
 
@@ -191,6 +502,120 @@ function renderEvents() {
     }
   });
 }
+
+// Event Actions
+window.openAddEventModal = function () {
+  const modal = document.getElementById("add-event-modal");
+  const dateInput = document.getElementById("input-event-date");
+  if (dateInput && !dateInput.value) {
+    dateInput.value = new Date().toISOString().split("T")[0];
+  }
+  if (modal) modal.classList.add("active");
+};
+
+window.closeAddEventModal = function () {
+  const modal = document.getElementById("add-event-modal");
+  if (modal) modal.classList.remove("active");
+  const nameInput = document.getElementById("input-event-name");
+  if (nameInput) nameInput.value = "";
+};
+
+window.saveNewEvent = function () {
+  const nameInput = document.getElementById("input-event-name");
+  const dateInput = document.getElementById("input-event-date");
+  const countSelect = document.getElementById("input-event-coordinators");
+
+  const name = nameInput ? nameInput.value.trim() : "";
+  const date = dateInput ? dateInput.value : "";
+  const reqCount = countSelect ? parseInt(countSelect.value, 10) : 2;
+
+  if (!name) {
+    alert("Please enter an event name.");
+    return;
+  }
+  if (!date) {
+    alert("Please select an event date.");
+    return;
+  }
+
+  const newEvent = {
+    id: `evt-${Date.now()}`,
+    name,
+    event_date: date,
+    status: "planned",
+    required_coordinator_count: reqCount,
+    assigned_coordinators: [],
+  };
+
+  window.CSIData.events.unshift(newEvent);
+  localStorage.setItem("csi_events", JSON.stringify(window.CSIData.events));
+
+  closeAddEventModal();
+  renderEvents();
+  renderOverview();
+};
+
+window.markEventCompleted = function (eventId) {
+  const event = window.CSIData.events.find((e) => e.id === eventId);
+  if (!event) return;
+
+  event.status = "completed";
+
+  // Per Rule 8: Increment coordinator completed event counts when event finishes
+  if (Array.isArray(event.assigned_coordinators)) {
+    event.assigned_coordinators.forEach((memberId) => {
+      const member = window.CSIData.members.find((m) => m.id === memberId);
+      if (member) {
+        member.assignment_count = (member.assignment_count || 0) + 1;
+      }
+    });
+    localStorage.setItem("csi_members", JSON.stringify(window.CSIData.members));
+  }
+
+  localStorage.setItem("csi_events", JSON.stringify(window.CSIData.events));
+  renderEvents();
+  renderMembers();
+  renderOverview();
+};
+
+window.deleteEvent = function (eventId) {
+  if (!confirm("Are you sure you want to remove this event from the calendar?")) return;
+  window.CSIData.events = window.CSIData.events.filter((e) => e.id !== eventId);
+  localStorage.setItem("csi_events", JSON.stringify(window.CSIData.events));
+  renderEvents();
+  renderOverview();
+};
+
+window.exportEventsCSV = function () {
+  const events = window.CSIData.events;
+  if (!events || events.length === 0) {
+    alert("No events scheduled to export.");
+    return;
+  }
+
+  const headers = ["Event_Name", "Event_Date", "Status", "Required_Coordinators", "Assigned_Coordinators"];
+  const rows = events.map((e) => {
+    const assigned = (e.assigned_coordinators || [])
+      .map((id) => window.CSIData.members.find((m) => m.id === id)?.name || id)
+      .join("; ");
+    return [
+      `"${(e.name || "").replace(/"/g, '""')}"`,
+      `"${e.event_date || ""}"`,
+      `"${e.status || "planned"}"`,
+      e.required_coordinator_count || 2,
+      `"${assigned.replace(/"/g, '""')}"`
+    ];
+  });
+
+  const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", `csi_events_${new Date().toISOString().split("T")[0]}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
 
 // ------------------------------------------------------------------------------
 // Certificate Batch Validation
@@ -359,14 +784,27 @@ function runBatchValidationSimulation(count) {
 
       // Persist to localStorage automatically
       const batchSummary = {
+        id: `batch-${Date.now()}`,
         total,
         passed,
         failed,
         rate: Math.round((passed / total) * 100),
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        timestamp: new Date().toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })
       };
+
+      // Append to recent batches history
+      let batches = [];
+      try {
+        batches = JSON.parse(localStorage.getItem("csi_recent_batches") || "[]");
+      } catch (_) {}
+      batches.unshift(batchSummary);
+      if (batches.length > 20) batches = batches.slice(0, 20);
+
+      localStorage.setItem("csi_recent_batches", JSON.stringify(batches));
       localStorage.setItem("csi_last_batch", JSON.stringify(batchSummary));
+
       updateOverviewBatchStat(batchSummary);
+      renderRecentBatches();
     }
   }, 40);
 }
@@ -504,6 +942,57 @@ function exportBatchCSV() {
 }
 
 // ------------------------------------------------------------------------------
+// Certificate Batch History
+// ------------------------------------------------------------------------------
+function renderRecentBatches() {
+  const tbody = document.getElementById("cert-history-body");
+  if (!tbody) return;
+
+  let batches = [];
+  try {
+    batches = JSON.parse(localStorage.getItem("csi_recent_batches") || "[]");
+  } catch (_) {}
+
+  tbody.innerHTML = "";
+
+  if (!batches || batches.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 28px; color: var(--text-muted);">No certificate validation batches run yet. Upload PDFs or click <strong>Simulate Full 400-File Batch</strong> above to begin!</td></tr>`;
+    return;
+  }
+
+  batches.forEach((b) => {
+    const tr = document.createElement("tr");
+    const rateBadge = b.rate >= 90
+      ? `<span class="badge badge-success">${b.rate}% Passed</span>`
+      : b.rate >= 75
+      ? `<span class="badge badge-warning">${b.rate}% Passed</span>`
+      : `<span class="badge badge-danger">${b.rate}% Passed</span>`;
+
+    const statusBadge = b.failed === 0
+      ? `<span class="badge badge-success">Flawless (100%)</span>`
+      : `<span class="badge badge-purple">${b.passed} Passed / ${b.failed} Issues</span>`;
+
+    tr.innerHTML = `
+      <td><strong>${escapeHtml(b.timestamp)}</strong></td>
+      <td>${b.total} certificates</td>
+      <td><span style="color: var(--status-success); font-weight: 600;">${b.passed}</span></td>
+      <td><span style="color: var(--status-danger); font-weight: 600;">${b.failed}</span></td>
+      <td>${rateBadge}</td>
+      <td>${statusBadge}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+window.clearBatchHistory = function () {
+  if (!confirm("Are you sure you want to clear certificate validation history from this browser?")) return;
+  localStorage.removeItem("csi_recent_batches");
+  localStorage.removeItem("csi_last_batch");
+  renderRecentBatches();
+  updateOverviewBatchStat(null);
+};
+
+// ------------------------------------------------------------------------------
 // Coordinator Allocation Studio
 // ------------------------------------------------------------------------------
 function initAllocationStudio() {
@@ -595,9 +1084,10 @@ function initAllocationStudio() {
         if (selectedEvent) {
           selectedEvent.assigned_coordinators = selectedMembers.map((m) => m.id);
           selectedEvent.status = "confirmed";
+          localStorage.setItem("csi_events", JSON.stringify(window.CSIData.events));
           renderEvents();
           renderMembers();
-          alert(`Proposed assignment confirmed for ${selectedEvent.name}! (Per Rule 8, completed event counts will update after event completion).`);
+          alert(`Proposed assignment confirmed for ${selectedEvent.name}! (When the event finishes, click "Mark Done" in the Events tab to increment their completed counts).`);
         }
       };
     }
