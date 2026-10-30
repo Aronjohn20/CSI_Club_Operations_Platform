@@ -183,6 +183,7 @@ export class InMemorySupabaseRepository implements ISupabaseRepository {
       email: member.email !== undefined ? member.email : existing?.email || null,
       join_year: member.join_year || existing?.join_year || new Date().getFullYear(),
       member_type: member.member_type || existing?.member_type || 'new_coordinator',
+      assignment_count: member.assignment_count ?? existing?.assignment_count ?? 0,
       active: member.active !== undefined ? member.active : existing?.active ?? true,
       created_at: existing?.created_at || now,
       updated_at: now,

@@ -16,17 +16,17 @@ export type EntityType = 'members' | 'events' | 'coordinator_assignments' | 'all
 export interface MemberRecord {
   id: string;
   name: string;
-  email: string | null;
-  join_year: number;
   member_type: MemberType;
   active: boolean;
   role?: string;
   class_batch?: string;
   domain?: string;
   team_tier?: 'core' | 'sub_core';
-  notion_page_id?: string | null;
-  created_at: string;
-  updated_at: string;
+  assignment_count?: number;
+  email?: string | null;
+  join_year?: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface EventRecord {

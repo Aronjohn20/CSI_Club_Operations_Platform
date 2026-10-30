@@ -7,15 +7,22 @@ document.addEventListener("DOMContentLoaded", () => {
   const savedEvents = localStorage.getItem("csi_events");
   if (savedEvents) {
     try {
-      window.CSIData.events = JSON.parse(savedEvents);
+      const parsed = JSON.parse(savedEvents);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        window.CSIData.events = parsed;
+      }
     } catch (_) {}
   }
 
-  // Restore updated member assignment counts if any
+  // Restore members from localStorage if any
   const savedMembers = localStorage.getItem("csi_members");
   if (savedMembers) {
     try {
-      window.CSIData.members = JSON.parse(savedMembers);
+      const parsed = JSON.parse(savedMembers);
+      window.CSIData.members = parsed.map((m) => {
+        const { email, join_year, assignment_count, ...rest } = m;
+        return rest;
+      });
     } catch (_) {}
   }
 
@@ -107,6 +114,16 @@ function updateOverviewBatchStat(batch) {
 // ------------------------------------------------------------------------------
 // Members Directory & In-App Management
 // ------------------------------------------------------------------------------
+// Dynamic assignment counter calculated from real event assignments
+function getMemberCompletedCount(memberId) {
+  const events = window.CSIData.events || [];
+  return events.filter((e) =>
+    (e.status === "completed" || e.status === "confirmed") &&
+    Array.isArray(e.assigned_coordinators) &&
+    e.assigned_coordinators.includes(memberId)
+  ).length;
+}
+
 let currentMemberFilter = "";
 
 function renderMembers(searchTerm = currentMemberFilter) {
@@ -119,7 +136,6 @@ function renderMembers(searchTerm = currentMemberFilter) {
     const q = searchTerm.toLowerCase();
     members = members.filter((m) =>
       (m.name && m.name.toLowerCase().includes(q)) ||
-      (m.email && m.email.toLowerCase().includes(q)) ||
       (m.role && m.role.toLowerCase().includes(q)) ||
       (m.domain && m.domain.toLowerCase().includes(q)) ||
       (m.class_batch && m.class_batch.toLowerCase().includes(q))
@@ -129,7 +145,7 @@ function renderMembers(searchTerm = currentMemberFilter) {
   tbody.innerHTML = "";
 
   if (members.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 32px; color: var(--text-muted);">No members match your criteria. Click <strong>+ Add Member</strong> or <strong>📥 Import CSV</strong> to add coordinators!</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 32px; color: var(--text-muted);">No members match your criteria. Click <strong>+ Add Member</strong> or <strong>📥 Import CSV</strong> to add coordinators!</td></tr>`;
     return;
   }
 
@@ -163,7 +179,6 @@ function renderMembers(searchTerm = currentMemberFilter) {
     tr.innerHTML = `
       <td>
         <strong>${escapeHtml(m.name)}</strong>
-        <span style="display: block; font-size: 11px; color: var(--text-muted);">${escapeHtml(m.email)}</span>
       </td>
       <td>
         <span style="font-weight: 500; font-size: 13px;">${escapeHtml(roleDisplay)}</span>
@@ -171,14 +186,11 @@ function renderMembers(searchTerm = currentMemberFilter) {
       </td>
       <td>${classBadge}</td>
       <td><span class="badge ${badgeClass}">${badgeText}</span></td>
-      <td>${m.assignment_count ?? 0} event(s)</td>
+      <td>${getMemberCompletedCount(m.id)} event(s)</td>
       <td>
         <span class="badge ${m.active !== false ? "badge-success" : "badge-danger"}">
           ${m.active !== false ? "Active" : "Inactive"}
         </span>
-      </td>
-      <td style="font-size: 12px; color: var(--text-secondary); font-family: monospace;">
-        ${escapeHtml(m.email)}
       </td>
       <td>${actionButtons}</td>
     `;
@@ -192,12 +204,10 @@ window.openMemberModal = function (memberId) {
   const title = document.getElementById("member-modal-title");
   const idInput = document.getElementById("input-member-id");
   const nameInput = document.getElementById("input-member-name");
-  const emailInput = document.getElementById("input-member-email");
   const roleInput = document.getElementById("input-member-role");
   const domainInput = document.getElementById("input-member-domain");
   const classInput = document.getElementById("input-member-class");
   const typeInput = document.getElementById("input-member-type");
-  const assignInput = document.getElementById("input-member-assignments");
   const activeInput = document.getElementById("input-member-active");
 
   if (!modal) return;
@@ -208,23 +218,19 @@ window.openMemberModal = function (memberId) {
     title.textContent = "Edit Member Details";
     idInput.value = m.id;
     nameInput.value = m.name || "";
-    emailInput.value = m.email || "";
     roleInput.value = m.role || "";
     domainInput.value = m.domain || "Operations";
     classInput.value = m.class_batch || "";
     typeInput.value = m.member_type || "old_coordinator";
-    assignInput.value = m.assignment_count ?? 0;
     activeInput.checked = m.active !== false;
   } else {
     title.textContent = "Add New Member";
     idInput.value = "";
     nameInput.value = "";
-    emailInput.value = "";
     roleInput.value = "";
     domainInput.value = "Operations";
     classInput.value = "";
     typeInput.value = "new_coordinator";
-    assignInput.value = 0;
     activeInput.checked = true;
   }
 
@@ -239,18 +245,15 @@ window.closeMemberModal = function () {
 window.saveMember = function () {
   const idInput = document.getElementById("input-member-id");
   const nameInput = document.getElementById("input-member-name");
-  const emailInput = document.getElementById("input-member-email");
   const roleInput = document.getElementById("input-member-role");
   const domainInput = document.getElementById("input-member-domain");
   const classInput = document.getElementById("input-member-class");
   const typeInput = document.getElementById("input-member-type");
-  const assignInput = document.getElementById("input-member-assignments");
   const activeInput = document.getElementById("input-member-active");
 
   const name = nameInput.value.trim();
-  const email = emailInput.value.trim();
-  if (!name || !email) {
-    alert("Please provide both name and email.");
+  if (!name) {
+    alert("Please provide a member name.");
     return;
   }
 
@@ -260,12 +263,10 @@ window.saveMember = function () {
     const m = window.CSIData.members.find((x) => x.id === memberId);
     if (m) {
       m.name = name;
-      m.email = email;
       m.role = roleInput.value.trim() || "Member";
       m.domain = domainInput.value;
       m.class_batch = classInput.value.trim() || "-";
       m.member_type = typeInput.value;
-      m.assignment_count = parseInt(assignInput.value, 10) || 0;
       m.active = activeInput.checked;
     }
   } else {
@@ -273,12 +274,10 @@ window.saveMember = function () {
     const newMember = {
       id: `mem-${Date.now()}`,
       name,
-      email,
       role: roleInput.value.trim() || "Member",
       domain: domainInput.value || "Operations",
       class_batch: classInput.value.trim() || "-",
       member_type: typeInput.value,
-      assignment_count: parseInt(assignInput.value, 10) || 0,
       active: activeInput.checked,
     };
     window.CSIData.members.push(newMember);
@@ -309,15 +308,13 @@ window.exportMembersCSV = function () {
     return;
   }
 
-  const headers = ["Name", "Email", "Role", "Domain", "Class_Batch", "Member_Type", "Assignment_Count", "Active"];
+  const headers = ["Name", "Role", "Domain", "Class_Batch", "Member_Type", "Active"];
   const rows = members.map((m) => [
     `"${(m.name || "").replace(/"/g, '""')}"`,
-    `"${(m.email || "").replace(/"/g, '""')}"`,
     `"${(m.role || "").replace(/"/g, '""')}"`,
     `"${(m.domain || "").replace(/"/g, '""')}"`,
     `"${(m.class_batch || "").replace(/"/g, '""')}"`,
     `"${m.member_type || "old_coordinator"}"`,
-    m.assignment_count ?? 0,
     m.active !== false ? "true" : "false"
   ]);
 
@@ -385,12 +382,10 @@ window.handleMemberCSVImport = function (event) {
       importedMembers.push({
         id: `mem-${Date.now()}-${i}`,
         name,
-        email,
         role,
         domain,
         class_batch: classBatch,
         member_type: memberType,
-        assignment_count: count,
         active
       });
     }
@@ -452,8 +447,17 @@ function renderEvents() {
       : `<span class="badge badge-purple">Planned</span>`;
 
     // Overview row (5 columns)
+    const modeBadge = e.mode ? `<span class="badge ${e.mode === 'Online' ? 'badge-blue' : 'badge-purple'}" style="font-size: 10px; margin-left: 4px;">${escapeHtml(e.mode)}</span>` : "";
+    const typeBadge = e.event_type ? `<span class="badge" style="background: rgba(255,255,255,0.06); font-size: 11px; margin-left: 6px;">${escapeHtml(e.event_type)}</span>` : "";
+    const descText = e.description ? `<p style="font-size: 11px; color: var(--text-muted); margin-top: 3px;">${escapeHtml(e.description)}</p>` : "";
+
     const rowHtmlOverview = `
-      <td><strong>${escapeHtml(e.name)}</strong></td>
+      <td>
+        <strong>${escapeHtml(e.name)}</strong>
+        ${typeBadge}
+        ${modeBadge}
+        ${descText}
+      </td>
       <td>${e.event_date}</td>
       <td>${statusBadge}</td>
       <td>${e.required_coordinator_count} required</td>
@@ -473,7 +477,12 @@ function renderEvents() {
     `;
 
     const rowHtmlFull = `
-      <td><strong>${escapeHtml(e.name)}</strong></td>
+      <td>
+        <strong>${escapeHtml(e.name)}</strong>
+        ${typeBadge}
+        ${modeBadge}
+        ${descText}
+      </td>
       <td>${e.event_date}</td>
       <td>${statusBadge}</td>
       <td>${e.required_coordinator_count} required</td>
@@ -560,18 +569,6 @@ window.markEventCompleted = function (eventId) {
   if (!event) return;
 
   event.status = "completed";
-
-  // Per Rule 8: Increment coordinator completed event counts when event finishes
-  if (Array.isArray(event.assigned_coordinators)) {
-    event.assigned_coordinators.forEach((memberId) => {
-      const member = window.CSIData.members.find((m) => m.id === memberId);
-      if (member) {
-        member.assignment_count = (member.assignment_count || 0) + 1;
-      }
-    });
-    localStorage.setItem("csi_members", JSON.stringify(window.CSIData.members));
-  }
-
   localStorage.setItem("csi_events", JSON.stringify(window.CSIData.events));
   renderEvents();
   renderMembers();
@@ -1013,10 +1010,10 @@ function initAllocationStudio() {
       return;
     }
 
-    // Apply the allocation algorithm per BUSINESS_RULES.md
+    // Apply the allocation algorithm per BUSINESS_RULES.md (sorting by fewest completed events)
     const candidates = window.CSIData.members.filter((m) => m.active && m.member_type !== "other");
-    const newPool = candidates.filter((m) => m.member_type === "new_coordinator").sort((a, b) => a.assignment_count - b.assignment_count || Math.random() - 0.5);
-    const oldPool = candidates.filter((m) => m.member_type === "old_coordinator" || m.member_type === "executive").sort((a, b) => a.assignment_count - b.assignment_count || Math.random() - 0.5);
+    const newPool = candidates.filter((m) => m.member_type === "new_coordinator").sort((a, b) => getMemberCompletedCount(a.id) - getMemberCompletedCount(b.id) || Math.random() - 0.5);
+    const oldPool = candidates.filter((m) => m.member_type === "old_coordinator" || m.member_type === "executive").sort((a, b) => getMemberCompletedCount(a.id) - getMemberCompletedCount(b.id) || Math.random() - 0.5);
 
     let selectedMembers = [];
     let compositionType = "";
@@ -1059,7 +1056,7 @@ function initAllocationStudio() {
         <div class="card" style="flex: 1; border-color: ${borderColor}; background: ${bgColor}; min-width: 180px;">
           <span class="badge ${badgeClass}" style="margin-bottom: 8px;">${badgeLabel}</span>
           <h4 style="font-size: 15px; margin-bottom: 4px;">${escapeHtml(m.name)}</h4>
-          <p style="font-size: 12px; color: var(--text-secondary)">${m.email} • ${m.assignment_count} completed events</p>
+          <p style="font-size: 12px; color: var(--text-secondary)">${m.class_batch || m.domain || 'Member'} • ${getMemberCompletedCount(m.id)} completed events</p>
         </div>
       `;
     }).join("");

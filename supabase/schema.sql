@@ -11,20 +11,16 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE IF NOT EXISTS members (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name TEXT NOT NULL,
-    email TEXT UNIQUE,
-    join_year INTEGER NOT NULL,
     member_type TEXT NOT NULL CHECK (member_type IN ('new_coordinator', 'old_coordinator', 'other', 'executive')),
     role TEXT,
     class_batch TEXT,
     domain TEXT,
     team_tier TEXT CHECK (team_tier IN ('core', 'sub_core')),
     active BOOLEAN NOT NULL DEFAULT true,
-    notion_page_id TEXT UNIQUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now()),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now())
 );
 
-CREATE INDEX IF NOT EXISTS idx_members_notion_page_id ON members (notion_page_id);
 CREATE INDEX IF NOT EXISTS idx_members_active ON members (active);
 CREATE INDEX IF NOT EXISTS idx_members_member_type ON members (member_type);
 
@@ -37,12 +33,13 @@ CREATE TABLE IF NOT EXISTS events (
     event_date DATE NOT NULL,
     status TEXT NOT NULL DEFAULT 'planned' CHECK (status IN ('draft', 'planned', 'confirmed', 'completed', 'cancelled')),
     required_coordinator_count INTEGER NOT NULL DEFAULT 2,
-    notion_page_id TEXT UNIQUE,
+    mode TEXT DEFAULT 'Offline' CHECK (mode IN ('Online', 'Offline')),
+    event_type TEXT,
+    description TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now()),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now())
 );
 
-CREATE INDEX IF NOT EXISTS idx_events_notion_page_id ON events (notion_page_id);
 CREATE INDEX IF NOT EXISTS idx_events_status ON events (status);
 CREATE INDEX IF NOT EXISTS idx_events_event_date ON events (event_date);
 
@@ -70,36 +67,28 @@ CREATE TABLE IF NOT EXISTS coordinator_assignments (
     member_id UUID NOT NULL REFERENCES members(id) ON DELETE CASCADE,
     allocation_run_id UUID REFERENCES allocation_runs(id) ON DELETE SET NULL,
     status TEXT NOT NULL DEFAULT 'assigned' CHECK (status IN ('assigned', 'confirmed', 'declined', 'completed', 'replaced')),
-    notion_page_id TEXT UNIQUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now()),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now()),
     UNIQUE(event_id, member_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_assignments_event_member ON coordinator_assignments (event_id, member_id);
-CREATE INDEX IF NOT EXISTS idx_assignments_notion_page_id ON coordinator_assignments (notion_page_id);
 
 -- ------------------------------------------------------------------------------
--- 5. Notion Sync Jobs Table (Operational & Historical Sync Tracking)
+-- 5. Certificate Batch Runs Table (Operational & Historical Verification Logs)
 -- ------------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS notion_sync_jobs (
+CREATE TABLE IF NOT EXISTS certificate_batches (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    entity_type TEXT NOT NULL CHECK (entity_type IN ('members', 'events', 'coordinator_assignments', 'all')),
-    direction TEXT NOT NULL CHECK (direction IN ('pull_from_notion', 'push_to_notion', 'bidirectional')),
-    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'running', 'completed', 'partially_completed', 'failed')),
-    started_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now()),
-    completed_at TIMESTAMPTZ,
-    records_read INTEGER NOT NULL DEFAULT 0,
-    records_written INTEGER NOT NULL DEFAULT 0,
-    conflicts_detected INTEGER NOT NULL DEFAULT 0,
-    conflicts_resolved INTEGER NOT NULL DEFAULT 0,
-    error_summary TEXT,
+    total_files INTEGER NOT NULL DEFAULT 0,
+    passed_count INTEGER NOT NULL DEFAULT 0,
+    failed_count INTEGER NOT NULL DEFAULT 0,
+    pass_rate NUMERIC(5, 2) NOT NULL DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'completed' CHECK (status IN ('running', 'completed', 'failed')),
     details JSONB DEFAULT '{}'::jsonb,
-    created_by TEXT DEFAULT 'system'
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now())
 );
 
-CREATE INDEX IF NOT EXISTS idx_notion_sync_jobs_status ON notion_sync_jobs (status);
-CREATE INDEX IF NOT EXISTS idx_notion_sync_jobs_started_at ON notion_sync_jobs (started_at DESC);
+CREATE INDEX IF NOT EXISTS idx_cert_batches_created_at ON certificate_batches (created_at DESC);
 
 -- ------------------------------------------------------------------------------
 -- 6. Audit Logs Table
