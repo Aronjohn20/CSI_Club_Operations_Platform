@@ -49,6 +49,34 @@ function renderOverview() {
   document.getElementById("stat-active-coordinators").textContent = activeCount;
   document.getElementById("stat-coordinators-breakdown").textContent = `${newCount} New • ${oldCount} Senior/Old`;
   document.getElementById("stat-events-count").textContent = data.events.length;
+
+  // Load last batch from localStorage if available
+  const savedBatch = localStorage.getItem("csi_last_batch");
+  if (savedBatch) {
+    try {
+      updateOverviewBatchStat(JSON.parse(savedBatch));
+    } catch (_) {
+      updateOverviewBatchStat(null);
+    }
+  } else {
+    updateOverviewBatchStat(null);
+  }
+}
+
+function updateOverviewBatchStat(batch) {
+  const sumEl = document.getElementById("stat-batch-summary");
+  const hintEl = document.getElementById("stat-batch-hint");
+  if (!sumEl || !hintEl) return;
+
+  if (batch) {
+    sumEl.textContent = `${batch.passed} / ${batch.total}`;
+    hintEl.textContent = `${batch.rate}% pass rate (${batch.timestamp})`;
+    hintEl.style.color = batch.rate >= 90 ? "#34d399" : "#fbbf24";
+  } else {
+    sumEl.textContent = "No batches yet";
+    hintEl.textContent = "Run in Certificates tab";
+    hintEl.style.color = "var(--text-muted)";
+  }
 }
 
 // ------------------------------------------------------------------------------
@@ -118,6 +146,16 @@ function renderEvents() {
   if (tbodyOverview) tbodyOverview.innerHTML = "";
   if (tbodyFull) tbodyFull.innerHTML = "";
   if (eventSelect) eventSelect.innerHTML = "";
+
+  if (!events || events.length === 0) {
+    const emptyRow = `<tr><td colspan="5" style="text-align: center; padding: 28px; color: var(--text-muted);">No events scheduled yet. Add your upcoming events to begin coordinator allocations!</td></tr>`;
+    if (tbodyOverview) tbodyOverview.innerHTML = emptyRow;
+    if (tbodyFull) tbodyFull.innerHTML = emptyRow;
+    if (eventSelect) {
+      eventSelect.innerHTML = `<option value="">No pending events available</option>`;
+    }
+    return;
+  }
 
   events.forEach((e) => {
     const assignedNames = e.assigned_coordinators
@@ -318,6 +356,17 @@ function runBatchValidationSimulation(count) {
     if (processed >= total) {
       clearInterval(interval);
       progressText.textContent = `Completed! ${passed} passed, ${failed} failed out of ${total} files.`;
+
+      // Persist to localStorage automatically
+      const batchSummary = {
+        total,
+        passed,
+        failed,
+        rate: Math.round((passed / total) * 100),
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      localStorage.setItem("csi_last_batch", JSON.stringify(batchSummary));
+      updateOverviewBatchStat(batchSummary);
     }
   }, 40);
 }
