@@ -1,4 +1,4 @@
-﻿"""
+"""
 CSI Club Operations Platform - Certificate Validation Engine
 Complies with CERTIFICATE_VALIDATION.md specification.
 Performs data-driven, rule-based validation on uploaded PDF certificates.
@@ -77,7 +77,7 @@ class CertificateTemplateRules:
                 "has secured second place",
                 "has secured third place",
             ],
-            "date_pattern": r"(?:\b\d{1,2}(?:st|nd|rd|th)?[\s\/\-\.](?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)[\s\/\-\.]\d{2,4}\b|\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{2,4}\b|\b\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}\b|\b\d{4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,2}\b|\b202[4-9]\b)",
+            "date_pattern": r"\b(?:\d{1,2}(?:st|nd|rd|th)?\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}|\d{4}-\d{2}-\d{2}|\d{2}/\d{2}/\d{4})\b",
             "min_words": 15,
             "max_words": 200,
             "require_logo_image": True,
@@ -111,7 +111,7 @@ class CertificateTemplateRules:
                 "DRAFT",
                 "has participated in",
             ],
-            "date_pattern": r"(?:\b\d{1,2}(?:st|nd|rd|th)?[\s\/\-\.](?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)[\s\/\-\.]\d{2,4}\b|\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{2,4}\b|\b\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}\b|\b\d{4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,2}\b|\b202[4-9]\b)",
+            "date_pattern": r"\b(?:\d{1,2}(?:st|nd|rd|th)?\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}|\d{4}-\d{2}-\d{2}|\d{2}/\d{2}/\d{4})\b",
             "min_words": 15,
             "max_words": 200,
             "require_logo_image": True,
@@ -138,7 +138,7 @@ class CertificateTemplateRules:
                 "SAMPLE CERTIFICATE",
                 "DRAFT",
             ],
-            "date_pattern": r"(?:\b\d{1,2}(?:st|nd|rd|th)?[\s\/\-\.](?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)[\s\/\-\.]\d{2,4}\b|\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{2,4}\b|\b\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}\b|\b\d{4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,2}\b|\b202[4-9]\b)",
+            "date_pattern": r"\b(?:\d{1,2}(?:st|nd|rd|th)?\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}|\d{4}-\d{2}-\d{2}|\d{2}/\d{2}/\d{4})\b",
             "min_words": 15,
             "max_words": 200,
             "require_logo_image": True,
@@ -238,31 +238,17 @@ class CertificateValidator:
 
         full_text_clean = " ".join(full_text.split())
 
-        # 2. Content Rule: Required Phrases (Flexible matching for common acronyms & faculty titles)
+        # 2. Content Rule: Required Phrases
         for phrase in rules_cfg.get("required_phrases", []):
-            found = phrase.lower() in full_text_clean.lower()
-            # Recognize common accepted abbreviations
-            if not found:
-                if phrase.lower() == "computer society of india" and ("csi" in full_text_clean.lower() or "csi" in filename.lower()):
-                    found = True
-                elif "rajagiri" in phrase.lower() and ("rset" in full_text_clean.lower() or "rajagiri" in full_text_clean.lower()):
-                    found = True
-                elif "tripti" in phrase.lower() and "tripti" in full_text_clean.lower():
-                    found = True
-                elif "bency" in phrase.lower() and "bency" in full_text_clean.lower():
-                    found = True
-                elif "faculty coordinator" in phrase.lower() and ("coordinator" in full_text_clean.lower() or "branch counselor" in full_text_clean.lower()):
-                    found = True
-
-            if found:
+            if phrase.lower() in full_text_clean.lower():
                 results.append(
                     RuleResult(
                         rule_id=f"req_phrase_{phrase[:10]}",
                         rule_name=f"Required Text: '{phrase}'",
                         status="PASSED",
                         expected=f"Must contain '{phrase}'",
-                        actual="Found in extracted text or approved equivalent",
-                        explanation=f"The required CSI phrase '{phrase}' or official equivalent was detected.",
+                        actual="Found in extracted text",
+                        explanation=f"The required CSI phrase '{phrase}' was detected.",
                     )
                 )
             else:
