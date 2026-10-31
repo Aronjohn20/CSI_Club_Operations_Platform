@@ -778,23 +778,31 @@ function runBatchValidationSimulation(count, files = null) {
     const filename = hasRealFile ? files[i - 1].name : `CSI_Cert_Participant_${String(i).padStart(3, "0")}.pdf`;
     const recipientName = extractRecipientName(filename, i);
 
-    // 100% Deterministic evaluation via string hash (replaces Math.random for full reproducibility)
+    // 100% Deterministic evaluation:
+    // When real files are uploaded, all valid non-empty PDFs pass 100% (eliminates false failures on valid files).
+    // The simulated failure rate only applies in demo mode without real files.
     const fileHash = stringToHashCode(`${filename}_${i}`);
-    const isPass = (fileHash % 100) >= 8;
+    const isCorrupt = hasRealFile && (files[i - 1].size === 0 || !files[i - 1].name.toLowerCase().endsWith(".pdf"));
+    const isPass = hasRealFile ? !isCorrupt : (fileHash % 100) >= 8;
 
     let failedRule = null;
     let reason = null;
 
     if (!isPass) {
-      const reasons = [
-        { rule: "CSI Branch Logo Presence", reason: "Logo image object missing or below 150 DPI" },
-        { rule: "Event / Issuance Date", reason: "Date format mismatch or absent" },
-        { rule: "Forbidden Text Check", reason: "Contained draft placeholder text" },
-        { rule: "Required Text: 'Computer Society of India'", reason: "Phrase missing or truncated" },
-      ];
-      const r = reasons[fileHash % reasons.length];
-      failedRule = r.rule;
-      reason = r.reason;
+      if (isCorrupt) {
+        failedRule = "PDF Document Integrity";
+        reason = "File is empty (0 bytes) or not a valid .pdf file";
+      } else {
+        const reasons = [
+          { rule: "CSI Branch Logo Presence", reason: "Logo image object missing or below 150 DPI" },
+          { rule: "Event / Issuance Date", reason: "Date format mismatch or absent" },
+          { rule: "Forbidden Text Check", reason: "Contained draft placeholder text" },
+          { rule: "Required Text: 'Computer Society of India'", reason: "Phrase missing or truncated" },
+        ];
+        const r = reasons[fileHash % reasons.length];
+        failedRule = r.rule;
+        reason = r.reason;
+      }
     }
 
     const hexChecksum = fileHash.toString(16).padStart(8, "0") + stringToHashCode(filename).toString(16).padStart(8, "0");
