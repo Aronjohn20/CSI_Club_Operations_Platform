@@ -46,13 +46,6 @@
           <span>Members</span>
         </a>
       </nav>
-
-      <div class="sidebar-footer">
-        <div class="sync-status-pill">
-          <span>Standalone Mode</span>
-          <div class="status-indicator-dot"></div>
-        </div>
-      </div>
     </aside>
 
     <!-- Main Viewport -->
@@ -60,10 +53,6 @@
       <header class="top-header">
         <div class="header-title-section">
           <h2 id="page-title">Overview</h2>
-        </div>
-        <div class="header-actions">
-          <span class="badge badge-purple">Cycle: Spring 2026 Term</span>
-          <span class="badge badge-success">Supabase Ready</span>
         </div>
       </header>
 
@@ -87,9 +76,9 @@
               <div class="stat-hint" id="stat-batch-hint" style="color: var(--text-muted)">Run in Certificates tab</div>
             </div>
             <div class="stat-card">
-              <div class="stat-label">Platform Mode</div>
-              <div class="stat-value" style="font-size: 18px; color: #34d399">Standalone</div>
-              <div class="stat-hint">Self-Contained & Independent</div>
+              <div class="stat-label">Platform Status</div>
+              <div class="stat-value" style="font-size: 18px; color: #34d399">Active</div>
+              <div class="stat-hint">CSI Operations Ready</div>
             </div>
           </div>
 
@@ -262,25 +251,14 @@
                 </div>
 
                 <div>
-                  <label style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 6px;">Required Coordinators Count (Rule 2.1: 2 or 3 only)</label>
+                  <label style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 6px;">Required Coordinators Count (2 or 3)</label>
                   <select id="alloc-count-input" style="width: 100%; background: var(--bg-surface-elevated); border: 1px solid var(--border-medium); color: #fff; padding: 10px; border-radius: var(--radius-md); font-size: 14px;">
-                    <option value="2" selected>2 Coordinators (1 New + 1 Old)</option>
-                    <option value="3">3 Coordinators (2 New + 1 Old [Fallback: 1 New + 2 Old])</option>
+                    <option value="2" selected>2 Coordinators</option>
+                    <option value="3">3 Coordinators</option>
                   </select>
                 </div>
 
-                <div class="card" style="background: var(--bg-surface-elevated); padding: 14px;">
-                  <strong style="font-size: 13px; color: #f0abfc;">Active Business Rules:</strong>
-                  <ul style="font-size: 12px; color: var(--text-secondary); margin-left: 20px; margin-top: 8px; line-height: 1.6;">
-                    <li><strong>2 Coordinators:</strong> Exactly 1 New (2026) + 1 Old (2024/2025)</li>
-                    <li><strong>3 Coordinators:</strong> Preferred 2 New + 1 Old (Fallback: 1 New + 2 Old)</li>
-                    <li><strong>Pair History:</strong> Avoids repeating prior pairs; preserved across cycles</li>
-                    <li><strong>Workload:</strong> Prioritizes members with fewest completed events</li>
-                    <li><strong>Lifecycle:</strong> Event counts increase only after event completion</li>
-                  </ul>
-                </div>
-
-                <button id="btn-generate-allocation" class="btn btn-primary" style="justify-content: center;">
+                <button id="btn-generate-allocation" class="btn btn-primary" style="justify-content: center; margin-top: 8px;">
                   Generate Deterministic Allocation
                 </button>
               </div>
@@ -298,11 +276,6 @@
                 </p>
 
                 <div id="alloc-selected-coordinators"></div>
-
-                <div style="margin-top: 16px;">
-                  <strong style="font-size: 12px; color: var(--text-muted); text-transform: uppercase;">Satisfied Constraints:</strong>
-                  <div id="alloc-constraint-chips" class="constraint-chips-container"></div>
-                </div>
 
                 <div style="margin-top: 24px; display: flex; justify-content: flex-end; gap: 12px;">
                   <button id="btn-confirm-allocation" class="btn btn-primary">
@@ -395,8 +368,6 @@
             </div>
           </div>
         </section>
-
-        <!-- TAB 5: MEMBERS DIRECTORY (Already above) -->
       </div>
     </main>
   </div>
@@ -436,8 +407,8 @@
             <div>
               <label style="display: block; font-size: 12px; font-weight: 500; margin-bottom: 6px; color: var(--text-secondary);">Required Coordinators</label>
               <select id="input-event-coordinators" style="width: 100%; padding: 10px 12px; background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); color: var(--text-primary); font-size: 13px;">
-                <option value="2" selected>2 (1 Old + 1 New)</option>
-                <option value="3">3 (2 New + 1 Old)</option>
+                <option value="2" selected>2 Coordinators</option>
+                <option value="3">3 Coordinators</option>
                 <option value="4">4 Coordinators</option>
               </select>
             </div>

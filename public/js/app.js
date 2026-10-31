@@ -1044,19 +1044,12 @@ function initAllocationStudio() {
     resultBox.style.display = "block";
     document.getElementById("alloc-event-display").textContent = selectedEvent ? selectedEvent.name : "Event";
     
-    // Render coordinator cards dynamically
+    // Render coordinator cards dynamically (Name and Class only)
     const cardsHtml = selectedMembers.map((m) => {
-      const isNew = m.member_type === "new_coordinator";
-      const badgeClass = isNew ? "badge-purple" : "badge-blue";
-      const badgeLabel = isNew ? "New Coordinator (2026)" : "Old Coordinator (2024/2025)";
-      const borderColor = isNew ? "rgba(217, 70, 239, 0.4)" : "rgba(59, 130, 246, 0.4)";
-      const bgColor = isNew ? "rgba(217, 70, 239, 0.05)" : "rgba(59, 130, 246, 0.05)";
-
       return `
-        <div class="card" style="flex: 1; border-color: ${borderColor}; background: ${bgColor}; min-width: 180px;">
-          <span class="badge ${badgeClass}" style="margin-bottom: 8px;">${badgeLabel}</span>
-          <h4 style="font-size: 15px; margin-bottom: 4px;">${escapeHtml(m.name)}</h4>
-          <p style="font-size: 12px; color: var(--text-secondary)">${m.class_batch || m.domain || 'Member'} • ${getMemberCompletedCount(m.id)} completed events</p>
+        <div class="card" style="flex: 1; min-width: 180px; background: var(--bg-surface-elevated); border: 1px solid var(--border-medium); padding: 16px;">
+          <h4 style="font-size: 16px; margin-bottom: 6px; color: #fff;">${escapeHtml(m.name)}</h4>
+          <p style="font-size: 13px; color: var(--text-secondary); margin: 0;">${escapeHtml(m.class_batch || "")}</p>
         </div>
       `;
     }).join("");
@@ -1067,12 +1060,10 @@ function initAllocationStudio() {
       </div>
     `;
 
-    document.getElementById("alloc-constraint-chips").innerHTML = `
-      <span class="constraint-chip satisfied">${compositionType} ✓</span>
-      <span class="constraint-chip satisfied">No Previous Pairing in Cycle ✓</span>
-      <span class="constraint-chip satisfied">Workload Balanced (Lowest completed events first) ✓</span>
-      <span class="constraint-chip satisfied">Active & Available ✓</span>
-    `;
+    const chipsEl = document.getElementById("alloc-constraint-chips");
+    if (chipsEl) {
+      chipsEl.innerHTML = "";
+    }
 
     // Confirm button hook (Rule 8: Proposed -> Confirmed. Completed events increase when event is completed)
     const confirmBtn = document.getElementById("btn-confirm-allocation");
