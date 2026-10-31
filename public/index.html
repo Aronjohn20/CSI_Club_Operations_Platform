@@ -182,7 +182,7 @@
                 <button class="btn btn-outline cert-filter-btn" data-filter="FAILED">Failed Rules</button>
               </div>
               <div style="display: flex; gap: 12px;">
-                <input type="text" id="cert-search-input" placeholder="Search by filename..." style="background: var(--bg-surface-elevated); border: 1px solid var(--border-medium); color: #fff; padding: 8px 14px; border-radius: var(--radius-md); font-size: 13px;">
+                <input type="text" id="cert-search-input" placeholder="Search by participant name or filename..." style="background: var(--bg-surface-elevated); border: 1px solid var(--border-medium); color: #fff; padding: 8px 14px; border-radius: var(--radius-md); font-size: 13px; width: 280px;">
                 <button id="btn-export-csv" class="btn btn-secondary">
                   📥 Export CSV
                 </button>
@@ -193,6 +193,7 @@
               <table class="custom-table">
                 <thead>
                   <tr>
+                    <th>Participant Name</th>
                     <th>Filename</th>
                     <th>Overall Status</th>
                     <th>Rules Passed</th>

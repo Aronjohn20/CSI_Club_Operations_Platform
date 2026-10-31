@@ -1,4 +1,4 @@
-// ==============================================================================
+﻿// ==============================================================================
 // CSI Club Operations Platform - Interactive Frontend Application Logic
 // ==============================================================================
 
@@ -663,13 +663,13 @@ function initCertificateUploader() {
 
   if (startBtn) {
     startBtn.addEventListener("click", () => {
-      runBatchValidationSimulation(selectedFiles.length || 20);
+      runBatchValidationSimulation(selectedFiles.length || 20, selectedFiles);
     });
   }
 
   if (demo400Btn) {
     demo400Btn.addEventListener("click", () => {
-      runBatchValidationSimulation(400);
+      runBatchValidationSimulation(400, null);
     });
   }
 
@@ -700,7 +700,48 @@ function initCertificateUploader() {
 
 let activeBatchResults = [];
 
-function runBatchValidationSimulation(count) {
+// Helper to extract clean human person name from filename or fallback to student roster
+function extractRecipientName(filename, index) {
+  if (!filename) return `Participant #${index}`;
+  
+  // 1. Strip extension
+  let base = filename.replace(/\.[^/.]+$/, "");
+  
+  // 2. Replace separators with spaces
+  let clean = base.replace(/[_\-\.]+/g, " ").trim();
+  
+  // 3. Remove standard certificate boilerplate words
+  clean = clean.replace(/^(csi|cert|certificate|participant|batch|award|completion)\s*/gi, "");
+  clean = clean.replace(/\s*(csi|cert|certificate|participant|batch|award|completion)$/gi, "");
+  clean = clean.replace(/^\d+\s*/, "").replace(/\s*\d+$/, "").trim();
+
+  // If there is meaningful name text with letters (at least 2 letters, not just "019" or "Part")
+  if (/[a-zA-Z]{2,}/.test(clean) && !/^(cert|participant|file|doc)\s*\d*$/i.test(clean)) {
+    return clean
+      .split(/\s+/)
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(" ");
+  }
+
+  // Fallback to student roster so every certificate has a concrete person name
+  const studentRoster = [
+    "Gayathri Binoj", "Abhishek Joby", "Ayyappadas S", "Fathima Naja", "Suraj S Panickar",
+    "Vishnu M P", "Aron Varghese John", "Sneha Phinoo", "Sreya Raj", "Kripa Ann John",
+    "Aafiya Shameer", "June Maria Sudhil", "Alina Mary John", "Ben George Simon", "Soorya Das K S",
+    "Riyan Raz", "Anjali Shaju", "Vaishnavi Dev Thekke Veedu", "Jovit Jerry", "Lanet Varghese",
+    "Elizabeth Joby", "Avanthika S", "Krishna Priya K R", "Aditya Menon", "Malavika S",
+    "Rohan George", "Pooja Ramesh", "Siddharth K", "Devika Pillai", "Naveen Kumar",
+    "Gautham Krishna", "Meera Nambiar", "Arjun Varma", "Ananya Verma", "Deepak Joseph",
+    "Sandhya R", "Ashwin Nair", "Harikrishnan P", "Reshma B", "Joel Mathew",
+    "Varun Mohan", "Swathi Krishna", "Kavya Madhavan", "Anirudh S", "Aparna R",
+    "Midhun Raj", "Nayana Thomas", "Amal Joseph", "Rohit R", "Gopika G"
+  ];
+  const baseName = studentRoster[(index - 1) % studentRoster.length];
+  const batchNum = Math.floor((index - 1) / studentRoster.length);
+  return batchNum > 0 ? `${baseName} (${batchNum + 1})` : baseName;
+}
+
+function runBatchValidationSimulation(count, files = null) {
   const progressBox = document.getElementById("cert-progress-box");
   const resultsCard = document.getElementById("cert-results-card");
   const progressText = document.getElementById("cert-progress-text");
@@ -721,12 +762,14 @@ function runBatchValidationSimulation(count) {
 
   const total = Math.min(count, 400);
 
-  // Generate simulated certificate items
+  // Generate certificate items (using real files if provided, or simulated batch)
   for (let i = 1; i <= total; i++) {
+    const hasRealFile = files && files[i - 1];
+    const filename = hasRealFile ? files[i - 1].name : `CSI_Cert_Participant_${String(i).padStart(3, "0")}.pdf`;
+    const recipientName = extractRecipientName(filename, i);
+
     // 92% pass rate, 8% failures with specific rule diagnostics
     const isPass = Math.random() > 0.08;
-    const numStr = String(i).padStart(3, "0");
-    const filename = `CSI_Cert_Participant_${numStr}.pdf`;
 
     let failedRule = null;
     let reason = null;
@@ -746,6 +789,7 @@ function runBatchValidationSimulation(count) {
     activeBatchResults.push({
       id: `file-${i}`,
       filename,
+      recipientName,
       status: isPass ? "PASSED" : "FAILED",
       totalRules: 6,
       passedRules: isPass ? 6 : 5,
@@ -777,7 +821,7 @@ function runBatchValidationSimulation(count) {
 
     if (processed >= total) {
       clearInterval(interval);
-      progressText.textContent = `Completed! ${passed} passed, ${failed} failed out of ${total} files.`;
+      progressText.textContent = `Completed! ${passed} passed, ${failed} failed out of ${total} certificates.`;
 
       // Persist to localStorage automatically
       const batchSummary = {
@@ -815,22 +859,28 @@ function renderCertificateResultsTable(results) {
   results.forEach((item) => {
     const tr = document.createElement("tr");
     tr.setAttribute("data-status", item.status);
-    tr.setAttribute("data-filename", item.filename.toLowerCase());
+    tr.setAttribute("data-filename", (item.filename || "").toLowerCase());
+    tr.setAttribute("data-recipient", (item.recipientName || "").toLowerCase());
+
+    const isPass = item.status === "PASSED";
+    const statusBadge = isPass 
+      ? `<span class="badge badge-success">PASSED</span>`
+      : `<span class="badge badge-danger">FAILED</span>`;
+
+    const diagnosticHtml = isPass
+      ? `<span style="color: var(--status-success)">All rules satisfied &#10003;</span>`
+      : `<span style="color: #f87171"><strong>${escapeHtml(item.failedRule)}</strong>: ${escapeHtml(item.reason)}</span>`;
 
     tr.innerHTML = `
-      <td><strong>${item.filename}</strong></td>
       <td>
-        <span class="badge ${item.status === "PASSED" ? "badge-success" : "badge-danger"}">
-          ${item.status}
-        </span>
+        <strong style="color: #fff; font-size: 14px;">${escapeHtml(item.recipientName || "Participant")}</strong>
       </td>
+      <td>
+        <span style="color: var(--text-secondary); font-size: 12px; font-family: monospace;">${escapeHtml(item.filename)}</span>
+      </td>
+      <td>${statusBadge}</td>
       <td>${item.passedRules} / ${item.totalRules}</td>
-      <td>
-        ${item.status === "PASSED" 
-          ? "<span style='color: var(--status-success)'>All rules satisfied ✓</span>"
-          : `<span style='color: #f87171'><strong>${item.failedRule}</strong>: ${item.reason}</span>`
-        }
-      </td>
+      <td>${diagnosticHtml}</td>
       <td>
         <button class="btn btn-outline" style="padding: 4px 8px; font-size: 11px;" onclick="inspectCertificate('${item.id}')">
           Inspect
@@ -856,8 +906,9 @@ function filterCertificateResults(filter) {
 function searchCertificateResults(query) {
   const rows = document.querySelectorAll("#cert-results-body tr");
   rows.forEach((r) => {
-    const filename = r.getAttribute("data-filename");
-    if (filename.includes(query)) {
+    const filename = r.getAttribute("data-filename") || "";
+    const recipient = r.getAttribute("data-recipient") || "";
+    if (filename.includes(query) || recipient.includes(query)) {
       r.style.display = "";
     } else {
       r.style.display = "none";
@@ -874,8 +925,12 @@ window.inspectCertificate = function (fileId) {
   if (!modal || !modalBody) return;
 
   modalBody.innerHTML = `
-    <h4 style="margin-bottom: 12px; font-size: 16px;">${item.filename}</h4>
-    <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 20px;">Checksum: ${item.checksum}</p>
+    <div style="margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border-subtle);">
+      <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Certificate Recipient</div>
+      <h3 style="margin-top: 4px; font-size: 18px; color: #fff;">${escapeHtml(item.recipientName || item.filename)}</h3>
+      <p style="font-size: 12px; color: var(--text-secondary); margin-top: 4px; font-family: monospace;">File: ${escapeHtml(item.filename)}</p>
+      <p style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">Checksum: ${item.checksum}</p>
+    </div>
 
     <div style="display: flex; flex-direction: column; gap: 10px;">
       <div class="card" style="padding: 12px; background: var(--bg-surface-elevated)">
@@ -923,10 +978,10 @@ function exportBatchCSV() {
   }
 
   let csvContent = "data:text/csv;charset=utf-8,";
-  csvContent += "Filename,Overall Status,Total Rules,Passed,Failed,Failed Rule Name,Reason,Checksum\n";
+  csvContent += "Participant Name,Filename,Overall Status,Total Rules,Passed,Failed,Failed Rule Name,Reason,Checksum\n";
 
   activeBatchResults.forEach((r) => {
-    csvContent += `"${r.filename}","${r.status}",${r.totalRules},${r.passedRules},${r.failedRules},"${r.failedRule || 'None'}","${r.reason || 'All rules satisfied'}","${r.checksum}"\n`;
+    csvContent += `"${r.recipientName || ''}","${r.filename}","${r.status}",${r.totalRules},${r.passedRules},${r.failedRules},"${r.failedRule || ''}","${r.reason || 'All rules satisfied'}","${r.checksum}"\n`;
   });
 
   const encodedUri = encodeURI(csvContent);
@@ -937,8 +992,6 @@ function exportBatchCSV() {
   link.click();
   document.body.removeChild(link);
 }
-
-// ------------------------------------------------------------------------------
 // Certificate Batch History
 // ------------------------------------------------------------------------------
 function renderRecentBatches() {
