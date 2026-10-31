@@ -741,6 +741,16 @@ function extractRecipientName(filename, index) {
   return batchNum > 0 ? `${baseName} (${batchNum + 1})` : baseName;
 }
 
+// Deterministic hash function (djb2) to ensure 100% testing reproducibility
+function stringToHashCode(str) {
+  let hash = 5381;
+  for (let j = 0; j < str.length; j++) {
+    hash = ((hash << 5) + hash) + str.charCodeAt(j);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
 function runBatchValidationSimulation(count, files = null) {
   const progressBox = document.getElementById("cert-progress-box");
   const resultsCard = document.getElementById("cert-results-card");
@@ -768,8 +778,9 @@ function runBatchValidationSimulation(count, files = null) {
     const filename = hasRealFile ? files[i - 1].name : `CSI_Cert_Participant_${String(i).padStart(3, "0")}.pdf`;
     const recipientName = extractRecipientName(filename, i);
 
-    // 92% pass rate, 8% failures with specific rule diagnostics
-    const isPass = Math.random() > 0.08;
+    // 100% Deterministic evaluation via string hash (replaces Math.random for full reproducibility)
+    const fileHash = stringToHashCode(`${filename}_${i}`);
+    const isPass = (fileHash % 100) >= 8;
 
     let failedRule = null;
     let reason = null;
@@ -781,10 +792,12 @@ function runBatchValidationSimulation(count, files = null) {
         { rule: "Forbidden Text Check", reason: "Contained draft placeholder text" },
         { rule: "Required Text: 'Computer Society of India'", reason: "Phrase missing or truncated" },
       ];
-      const r = reasons[Math.floor(Math.random() * reasons.length)];
+      const r = reasons[fileHash % reasons.length];
       failedRule = r.rule;
       reason = r.reason;
     }
+
+    const hexChecksum = fileHash.toString(16).padStart(8, "0") + stringToHashCode(filename).toString(16).padStart(8, "0");
 
     activeBatchResults.push({
       id: `file-${i}`,
@@ -796,7 +809,7 @@ function runBatchValidationSimulation(count, files = null) {
       failedRules: isPass ? 0 : 1,
       failedRule,
       reason,
-      checksum: `sha256_${Math.random().toString(36).slice(2, 14)}`,
+      checksum: `sha256_${hexChecksum}`,
     });
   }
 
@@ -1065,8 +1078,8 @@ function initAllocationStudio() {
 
     // Apply the allocation algorithm per BUSINESS_RULES.md (sorting by fewest completed events)
     const candidates = window.CSIData.members.filter((m) => m.active && m.member_type !== "other");
-    const newPool = candidates.filter((m) => m.member_type === "new_coordinator").sort((a, b) => getMemberCompletedCount(a.id) - getMemberCompletedCount(b.id) || Math.random() - 0.5);
-    const oldPool = candidates.filter((m) => m.member_type === "old_coordinator" || m.member_type === "executive").sort((a, b) => getMemberCompletedCount(a.id) - getMemberCompletedCount(b.id) || Math.random() - 0.5);
+    const newPool = candidates.filter((m) => m.member_type === "new_coordinator").sort((a, b) => getMemberCompletedCount(a.id) - getMemberCompletedCount(b.id) || a.id.localeCompare(b.id));
+    const oldPool = candidates.filter((m) => m.member_type === "old_coordinator" || m.member_type === "executive").sort((a, b) => getMemberCompletedCount(a.id) - getMemberCompletedCount(b.id) || a.id.localeCompare(b.id));
 
     let selectedMembers = [];
     let compositionType = "";
