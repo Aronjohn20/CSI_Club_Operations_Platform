@@ -106,3 +106,4 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authen
 
 -- 10. Force PostgREST to reload its schema cache immediately
 NOTIFY pgrst, 'reload schema';
+
