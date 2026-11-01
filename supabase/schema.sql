@@ -1,4 +1,4 @@
--- ==============================================================================
+﻿-- ==============================================================================
 -- CSI Club Operations Platform - Database Schema for Supabase / PostgreSQL
 -- ==============================================================================
 
@@ -17,7 +17,8 @@ CREATE TABLE IF NOT EXISTS members (
     domain TEXT,
     team_tier TEXT CHECK (team_tier IN ('core', 'sub_core')),
     active BOOLEAN NOT NULL DEFAULT true,
-
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now()),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now())
 );
 
 CREATE INDEX IF NOT EXISTS idx_members_active ON members (active);
