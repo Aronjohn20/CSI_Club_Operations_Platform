@@ -50,9 +50,13 @@
 
     <!-- Main Viewport -->
     <main class="main-wrapper">
-      <header class="top-header">
+      <header class="top-header" style="display: flex; justify-content: space-between; align-items: center;">
         <div class="header-title-section">
           <h2 id="page-title">Overview</h2>
+        </div>
+        <div id="supabase-status-badge" style="display: flex; align-items: center; gap: 8px; font-size: 12px; padding: 5px 12px; border-radius: 20px; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.25); color: #93c5fd;">
+          <span id="supabase-status-dot" style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #60a5fa;"></span>
+          <span id="supabase-status-text">Connecting to Supabase...</span>
         </div>
       </header>
 
@@ -487,8 +491,10 @@
     </div>
   </div>
 
-  <!-- No external PDF library needed: pure binary PDF parser built into app.js -->
-  <script src="js/mockData.js?v=20261101_v20"></script>
-  <script src="js/app.js?v=20261101_v20"></script>
+  <!-- Supabase JS Client CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Pure binary PDF parser built into app.js -->
+  <script src="js/mockData.js?v=20261102_v22"></script>
+  <script src="js/app.js?v=20261102_v22"></script>
 </body>
 </html>

@@ -2,7 +2,75 @@
 // CSI Club Operations Platform - Interactive Frontend Application Logic
 // ==============================================================================
 
+// ------------------------------------------------------------------------------
+// Supabase Cloud Backend Configuration
+// ------------------------------------------------------------------------------
+const SUPABASE_CONFIG = {
+  url: "https://ybumucceiiqcbxpnoimr.supabase.co",
+  anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlidW11Y2NlaWlxY2J4cG5vaW1yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMzODI5NzMsImV4cCI6MjEwODk1ODk3M30.nHqLXm-6RyfdJy93LQNn3lk0XfaQCvm2cvak4BDGqEw"
+};
+
+let supabaseClient = null;
+
+function initSupabase() {
+  if (window.supabase) {
+    try {
+      supabaseClient = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
+      console.log("Supabase client initialized.");
+      updateSupabaseBadge(true, "Supabase Online");
+      checkSupabaseConnection();
+    } catch (err) {
+      console.warn("Supabase init error:", err);
+      updateSupabaseBadge(false, "Supabase Offline");
+    }
+  } else {
+    updateSupabaseBadge(false, "Supabase SDK Not Loaded");
+  }
+}
+
+async function checkSupabaseConnection() {
+  if (!supabaseClient) return;
+  try {
+    const { data, error } = await supabaseClient.from("certificate_batches").select("id").limit(1);
+    if (error) {
+      if (error.code === "PGRST205") {
+        updateSupabaseBadge(false, "Supabase: Run Schema SQL");
+      } else {
+        updateSupabaseBadge(true, "Supabase Connected");
+      }
+    } else {
+      updateSupabaseBadge(true, "Supabase Synced");
+      loadBatchesFromSupabase();
+    }
+  } catch (_) {
+    updateSupabaseBadge(false, "Supabase Error");
+  }
+}
+
+function updateSupabaseBadge(connected, text) {
+  const badge = document.getElementById("supabase-status-badge");
+  const dot = document.getElementById("supabase-status-dot");
+  const label = document.getElementById("supabase-status-text");
+  if (!badge || !dot || !label) return;
+
+  if (connected) {
+    badge.style.background = "rgba(34, 197, 94, 0.1)";
+    badge.style.borderColor = "rgba(34, 197, 94, 0.25)";
+    badge.style.color = "#4ade80";
+    dot.style.background = "#4ade80";
+    dot.style.boxShadow = "0 0 8px #4ade80";
+  } else {
+    badge.style.background = "rgba(245, 158, 11, 0.1)";
+    badge.style.borderColor = "rgba(245, 158, 11, 0.25)";
+    badge.style.color = "#fbbf24";
+    dot.style.background = "#fbbf24";
+    dot.style.boxShadow = "0 0 8px #fbbf24";
+  }
+  label.textContent = text;
+}
+
 document.addEventListener("DOMContentLoaded", () => {
+  initSupabase();
   // Restore saved events from localStorage if any
   const savedEvents = localStorage.getItem("csi_events");
   if (savedEvents) {
@@ -1145,6 +1213,10 @@ async function runBatchValidationSimulation(count, files = null) {
     timestamp: new Date().toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })
   };
 
+  await persistBatchSummary(batchSummary, activeBatchResults);
+}
+
+async function persistBatchSummary(batchSummary, activeResults) {
   let batches = [];
   try {
     batches = JSON.parse(localStorage.getItem("csi_recent_batches") || "[]");
@@ -1157,6 +1229,45 @@ async function runBatchValidationSimulation(count, files = null) {
 
   updateOverviewBatchStat(batchSummary);
   renderRecentBatches();
+
+  if (supabaseClient) {
+    try {
+      const payload = {
+        total_files: batchSummary.total,
+        passed_count: batchSummary.passed,
+        failed_count: batchSummary.failed,
+        pass_rate: parseFloat((batchSummary.rate).toFixed(2)),
+        status: "completed",
+        details: {
+          timestamp: batchSummary.timestamp,
+          sample_files: (activeResults || []).slice(0, 50).map(r => ({
+            recipient: r.recipientName,
+            filename: r.filename,
+            status: r.status,
+            passedRules: r.passedRules,
+            totalRules: r.totalRules,
+            failedRule: r.failedRule,
+            reason: r.reason,
+            checksum: r.checksum
+          }))
+        }
+      };
+
+      const { data, error } = await supabaseClient
+        .from("certificate_batches")
+        .insert([payload])
+        .select();
+
+      if (error) {
+        console.warn("Supabase certificate_batches sync error:", error);
+      } else {
+        console.log("Supabase certificate_batches saved:", data);
+        updateSupabaseBadge(true, "Supabase Synced (Batch Saved)");
+      }
+    } catch (err) {
+      console.warn("Supabase batch sync exception:", err);
+    }
+  }
 }
 
 function renderCertificateResultsTable(results) {
@@ -1343,43 +1454,17 @@ function exportBatchCSV() {
 // Certificate Batch History
 // ------------------------------------------------------------------------------
 function renderRecentBatches() {
-  const tbody = document.getElementById("cert-history-body");
-  if (!tbody) return;
-
   let batches = [];
   try {
     batches = JSON.parse(localStorage.getItem("csi_recent_batches") || "[]");
   } catch (_) {}
 
-  tbody.innerHTML = "";
+  renderBatchesTable(batches);
 
-  if (!batches || batches.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 28px; color: var(--text-muted);">No certificate validation batches run yet. Upload PDFs or click <strong>Simulate Full 400-File Batch</strong> above to begin!</td></tr>`;
-    return;
+  // If Supabase client is connected, fetch and merge cloud batches
+  if (supabaseClient) {
+    loadBatchesFromSupabase();
   }
-
-  batches.forEach((b) => {
-    const tr = document.createElement("tr");
-    const rateBadge = b.rate >= 90
-      ? `<span class="badge badge-success">${b.rate}% Passed</span>`
-      : b.rate >= 75
-      ? `<span class="badge badge-warning">${b.rate}% Passed</span>`
-      : `<span class="badge badge-danger">${b.rate}% Passed</span>`;
-
-    const statusBadge = b.failed === 0
-      ? `<span class="badge badge-success">Flawless (100%)</span>`
-      : `<span class="badge badge-purple">${b.passed} Passed / ${b.failed} Issues</span>`;
-
-    tr.innerHTML = `
-      <td><strong>${escapeHtml(b.timestamp)}</strong></td>
-      <td>${b.total} certificates</td>
-      <td><span style="color: var(--status-success); font-weight: 600;">${b.passed}</span></td>
-      <td><span style="color: var(--status-danger); font-weight: 600;">${b.failed}</span></td>
-      <td>${rateBadge}</td>
-      <td>${statusBadge}</td>
-    `;
-    tbody.appendChild(tr);
-  });
 }
 
 window.clearBatchHistory = function () {
@@ -1469,17 +1554,153 @@ function initAllocationStudio() {
     // Confirm button hook (Rule 8: Proposed -> Confirmed. Completed events increase when event is completed)
     const confirmBtn = document.getElementById("btn-confirm-allocation");
     if (confirmBtn) {
-      confirmBtn.onclick = () => {
+      confirmBtn.onclick = async () => {
         if (selectedEvent) {
           selectedEvent.assigned_coordinators = selectedMembers.map((m) => m.id);
           selectedEvent.status = "confirmed";
           localStorage.setItem("csi_events", JSON.stringify(window.CSIData.events));
           renderEvents();
           renderMembers();
+
+          // Sync to Supabase
+          if (supabaseClient) {
+            await saveAllocationToSupabase(selectedEvent, selectedMembers, compositionType, requiredCount);
+          }
+
           alert(`Proposed assignment confirmed for ${selectedEvent.name}! (When the event finishes, click "Mark Done" in the Events tab to increment their completed counts).`);
         }
       };
     }
+  });
+}
+
+async function saveAllocationToSupabase(selectedEvent, selectedMembers, compositionType, requiredCount) {
+  if (!supabaseClient) return;
+  try {
+    const runPayload = {
+      event_id: String(selectedEvent.id),
+      rule_version: "1.0",
+      input_snapshot: {
+        event_name: selectedEvent.name,
+        event_date: selectedEvent.event_date,
+        required_coordinator_count: requiredCount,
+        candidate_pool_size: window.CSIData.members.filter(m => m.active).length
+      },
+      result: {
+        composition: compositionType,
+        coordinators: selectedMembers.map(m => ({
+          id: m.id,
+          name: m.name,
+          class_batch: m.class_batch,
+          member_type: m.member_type
+        }))
+      }
+    };
+
+    const { data: runData, error: runError } = await supabaseClient
+      .from("allocation_runs")
+      .insert([runPayload])
+      .select();
+
+    const runId = runData && runData[0] ? runData[0].id : null;
+
+    const assignments = selectedMembers.map(m => ({
+      event_id: String(selectedEvent.id),
+      member_id: String(m.id),
+      allocation_run_id: runId,
+      status: "assigned"
+    }));
+
+    await supabaseClient
+      .from("coordinator_assignments")
+      .insert(assignments);
+
+    // Upsert event details into events table
+    await supabaseClient
+      .from("events")
+      .upsert({
+        id: String(selectedEvent.id),
+        name: selectedEvent.name,
+        event_date: selectedEvent.event_date,
+        status: "confirmed",
+        required_coordinator_count: requiredCount,
+        mode: selectedEvent.mode || "Offline",
+        event_type: selectedEvent.event_type || "Event",
+        description: selectedEvent.description || "",
+        assigned_coordinators: selectedMembers.map(m => m.id)
+      });
+
+    console.log("Supabase allocation & assignments synced successfully!");
+    updateSupabaseBadge(true, "Supabase Synced (Allocation Saved)");
+  } catch (err) {
+    console.warn("Supabase allocation sync exception:", err);
+  }
+}
+
+async function loadBatchesFromSupabase() {
+  if (!supabaseClient) return;
+  try {
+    const { data, error } = await supabaseClient
+      .from("certificate_batches")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(20);
+
+    if (!error && Array.isArray(data) && data.length > 0) {
+      const sbBatches = data.map((b) => ({
+        id: b.id,
+        total: b.total_files,
+        passed: b.passed_count,
+        failed: b.failed_count,
+        rate: Math.round(b.pass_rate),
+        timestamp: new Date(b.created_at).toLocaleString([], { dateStyle: "short", timeStyle: "short" }),
+        source: "Supabase"
+      }));
+      renderBatchesTable(sbBatches);
+      if (sbBatches[0]) {
+        updateOverviewBatchStat(sbBatches[0]);
+      }
+    }
+  } catch (err) {
+    console.warn("Could not fetch Supabase batches:", err);
+  }
+}
+
+function renderBatchesTable(batches) {
+  const tbody = document.getElementById("cert-history-body");
+  if (!tbody) return;
+  tbody.innerHTML = "";
+
+  if (!batches || batches.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 28px; color: var(--text-muted);">No certificate validation batches run yet. Upload PDFs or click <strong>Simulate Full 400-File Batch</strong> above to begin!</td></tr>`;
+    return;
+  }
+
+  batches.forEach((b) => {
+    const tr = document.createElement("tr");
+    const rateBadge = b.rate >= 90
+      ? `<span class="badge badge-success">${b.rate}% Passed</span>`
+      : b.rate >= 75
+      ? `<span class="badge badge-warning">${b.rate}% Passed</span>`
+      : `<span class="badge badge-danger">${b.rate}% Passed</span>`;
+
+    const statusBadge = b.failed === 0
+      ? `<span class="badge badge-success">Flawless (100%)</span>`
+      : `<span class="badge badge-purple">${b.passed} Passed / ${b.failed} Issues</span>`;
+
+    const sourceTag = b.source === "Supabase" 
+      ? `<span style="margin-left: 6px; font-size: 10px; padding: 2px 6px; border-radius: 4px; background: rgba(59, 130, 246, 0.2); color: #93c5fd;">Cloud</span>`
+      : "";
+
+    tr.innerHTML = `
+      <td><strong>${escapeHtml(b.timestamp)}</strong>${sourceTag}</td>
+      <td>${b.total} certificates</td>
+      <td><span style="color: var(--status-success); font-weight: 600;">${b.passed}</span></td>
+      <td><span style="color: var(--status-danger); font-weight: 600;">${b.failed}</span></td>
+      <td>${rateBadge}</td>
+      <td>${statusBadge}</td>
+    `;
+    tbody.appendChild(tr);
   });
 }
 
